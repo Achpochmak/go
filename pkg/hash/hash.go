@@ -8,7 +8,7 @@ import (
 
 // GenerateHash возвращает случайный "хэш"
 func GenerateHash() string {
-	time.Sleep(time.Second * 5) // имитируем долгую работу
+	time.Sleep(time.Second * 1) // имитируем долгую работу
 	id := uuid.New()
 
 	return id.String()
