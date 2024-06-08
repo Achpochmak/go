@@ -6,8 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"HOMEWORK-1/internal/models"
@@ -33,11 +36,23 @@ type Deps struct {
 type CLI struct {
 	Deps
 	commandList []command
+	taskQueue chan task
+	notifications chan string
+	workerPool    chan struct{}
+	numWorkers int
+	mu sync.Mutex
+	wg sync.WaitGroup
+	orderLocks  map[models.Id]*sync.Mutex
+}
+
+type task struct {
+	commandName string
+	args        []string
 }
 
 // NewCLI creates a command line interface
-func NewCLI(d Deps) CLI {
-	return CLI{
+func NewCLI(d Deps) *CLI {
+	cli:=&CLI{
 		Deps: d,
 		commandList: []command{
 			{
@@ -46,7 +61,7 @@ func NewCLI(d Deps) CLI {
 			},
 			{
 				name:        addOrder,
-				description: "добавить заказ: использование add --id=1 --id_receiver=8435432342 --storage_time=2023-06-15T15:04:05Z",
+				description: "добавить заказ: использование add --id=1 --id_receiver=1 --storage_time=2025-06-15T15:04:05Z",
 			},
 			{
 				name:        deleteOrder,
@@ -72,60 +87,197 @@ func NewCLI(d Deps) CLI {
 				name:        listRefund,
 				description: "вывести список возвратов: использование refund (опционально:--page=1 --page_size=1)",
 			},
+			{
+				name:        setWorkers,
+				description: "вывести список возвратов: использование setWorkers --num=5",
+			},
 		},
+		taskQueue: make(chan task, 10),
+		numWorkers: 2,
+		workerPool: make(chan struct{}, 2),
+		orderLocks: make(map[models.Id]*sync.Mutex),
+		notifications: make(chan string, 10),
+			
 	}
+	go cli.notificationHandler()
+	return cli
 }
 
 // Run ..
-func (c CLI) Run() error {
+func (c *CLI) Run() error {
+	for i := 0; i < c.numWorkers; i++ {
+		c.wg.Add(1)
+		go c.worker()
+	}
+
+	c.handleSignals()
+
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("> ")
-	input, err := reader.ReadString('\n')
-	if err != nil {
+	for {
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return err
+		}
+
+		args := strings.Fields(strings.TrimSpace(input))
+		if len(args) == 0 {
+			fmt.Println("command isn't set")
+			continue
+		}
+
+		commandName := args[0]
+		if commandName == exit {
+			close(c.taskQueue)
+			break
+		}
+		c.taskQueue <- task{commandName: commandName, args: args[1:]}
+	}
+
+	c.wg.Wait()
+	fmt.Println("All tasks completed. Exiting...")
+	os.Exit(0)
+	return nil
+}
+
+//Обработка уведомлений
+func (c *CLI) notificationHandler() {
+	for msg := range c.notifications {
+		fmt.Println(msg)
+	}
+}
+
+func (c *CLI) worker() {
+	defer c.wg.Done()
+	for t := range c.taskQueue {
+		startMsg := fmt.Sprintf("Началась обработка команды: %s", t.commandName)
+		endMsg := fmt.Sprintf("Завершилась обработка команды: %s", t.commandName)
+		c.notifications <- startMsg
+		switch t.commandName {
+
+		case help:
+			c.help()
+		case addOrder:
+			if err := c.addOrder(t.args); err != nil {
+				fmt.Println("Ошибка:", err)
+			}
+		case deleteOrder:
+			if err := c.deleteOrder(t.args); err != nil {
+				fmt.Println("Ошибка:", err)
+			}
+		case deliverOrder:
+			if err := c.deliverOrder(t.args); err != nil {
+				fmt.Println("Ошибка:", err)
+			}		
+		case listOrder:
+			if err := c.listOrder(); err != nil {
+				fmt.Println("Ошибка:", err)
+			}
+		case findOrder:
+			if err := c.findOrder(t.args); err != nil {
+				fmt.Println("Ошибка:", err)
+			}
+		case OrdersByCustomer:
+			if err := c.OrdersByCustomer(t.args); err != nil {
+				fmt.Println("Ошибка:", err)
+			}		
+		case Refund:
+			if err := c.Refund(t.args); err != nil {
+				fmt.Println("Ошибка:", err)
+			}		
+		case listRefund:
+			if err := c.listRefund(t.args); err != nil {
+				fmt.Println("Ошибка:", err)
+			}
+		case setWorkers:
+			if err := c.setWorkers(t.args); err != nil {
+				fmt.Println("Ошибка:", err)
+			}		
+		case exit:
+			fmt.Println("Exiting...")
+			c.mu.Unlock()
+			close(c.taskQueue)
+			os.Exit(0)
+		default:
+			fmt.Println("command isn't set")
+		}
+		c.notifications <- endMsg
+		
+	}
+}
+
+//Обработка сигналов
+func (c *CLI) handleSignals() {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigChan
+		fmt.Printf("Получена команда %s. Exiting...\n", sig)
+		close(c.taskQueue)
+		c.wg.Wait()
+		os.Exit(0)
+	}()
+}
+
+//Заблокировать заказ
+func (c *CLI) lockOrder(id int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, exists := c.orderLocks[models.Id(id)]; !exists {
+		c.orderLocks[models.Id(id)] = &sync.Mutex{}
+	}
+	c.orderLocks[models.Id(id)].Lock()
+}
+
+//Разблокировать заказ
+func (c *CLI) unlockOrder(id int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if lock, exists := c.orderLocks[models.Id(id)]; exists {
+		lock.Unlock()
+	}
+}
+
+//Измнение числа рутин
+func (c *CLI) setWorkers(args []string) error {
+	var num int
+	fs := flag.NewFlagSet("setWorkers", flag.ContinueOnError)
+	fs.IntVar(&num, "num", c.numWorkers, "use --num=1")
+
+	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	args := strings.Fields(strings.TrimSpace(input))
-	if len(args) == 0 {
-		return fmt.Errorf("command isn't set")
+	if num < 1 {
+		return errors.New("количество должно быть 1")
 	}
 
-	commandName := args[0]
-	switch commandName {
-	case help:
-		c.help()
-		return nil
-	case addOrder:
-		return c.addOrder(args[1:])
-	case deleteOrder:
-		return c.deleteOrder(args[1:])
-	case deliverOrder:
-		return c.deliverOrder(args[1:])
-	case listOrder:
-		return c.listOrder()
-	case findOrder:
-		return c.findOrder(args[1:])
-	case OrdersByCustomer:
-		return c.OrdersByCustomer(args[1:])
-	case Refund:
-		return c.Refund(args[1:])
-	case listRefund:
-		return c.listRefund(args[1:])
-	case exit:
-		fmt.Println("Exiting...")
-		os.Exit(0)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if num > c.numWorkers {
+		for i := c.numWorkers; i < num; i++ {
+			c.wg.Add(1)
+			go c.worker()
+		}
+	} else if num < c.numWorkers {
+		for i := num; i < c.numWorkers; i++ {
+			c.taskQueue <- task{commandName: "exit"}
+		}
 	}
-	return fmt.Errorf("command isn't set")
+
+	c.numWorkers = num
+	fmt.Printf("Число рутин %d\n", c.numWorkers)
+	return nil
 }
 
 //Добавить заказ
-func (c CLI) addOrder(args []string) error {
+func (c *CLI) addOrder(args []string) error {
 	var id, id_receiver int
 	var storage_time string
 	fs := flag.NewFlagSet(addOrder, flag.ContinueOnError)
 	fs.IntVar(&id, "id", 0, "use --id=1")
 	fs.IntVar(&id_receiver, "id_receiver", 0, "use --id_receiver=1")
-	fs.StringVar(&storage_time, "storage_time", "", "use --storage_time=2023-06-15T15:04:05Z")
+	fs.StringVar(&storage_time, "storage_time", "", "use --storage_time=2025-06-15T15:04:05Z")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -154,6 +306,9 @@ func (c CLI) addOrder(args []string) error {
 		return errors.New("время хранения окончилось")
 	}
 
+	c.lockOrder(id)
+	defer c.unlockOrder(id)
+
 	return c.Module.AddOrder(models.Order{
 		Id:      models.Id(id),
 		Id_receiver: models.Id(id_receiver),
@@ -165,7 +320,7 @@ func (c CLI) addOrder(args []string) error {
 	}
 
 //Список заказов
-func (c CLI) listOrder() error {
+func (c *CLI) listOrder() error {
 	list, err := c.Module.ListOrder()
 	if err != nil {
 		return err
@@ -178,7 +333,7 @@ func (c CLI) listOrder() error {
 }
 
 //Удалить заказ
-func (c CLI) deleteOrder(args []string) error {
+func (c *CLI) deleteOrder(args []string) error {
 	var id int
 	fs := flag.NewFlagSet(deleteOrder, flag.ContinueOnError)
 	fs.IntVar(&id, "id", 0, "use --id=1")
@@ -192,14 +347,18 @@ func (c CLI) deleteOrder(args []string) error {
 	}
 
 	order, err := c.Module.FindOrder(models.Id(id))
+	
 	if err != nil {
 		return err
 	}
+	c.lockOrder(id)
+	defer c.unlockOrder(id)
+
 	return c.Module.DeleteOrder(models.Order(order))
 }
 
 //Доставить заказ
-func (c CLI) deliverOrder(args []string) error {
+func (c *CLI) deliverOrder(args []string) error {
 	var id_receiver int
 	var order_ids string
 	fs := flag.NewFlagSet(deliverOrder, flag.ContinueOnError)
@@ -217,11 +376,13 @@ func (c CLI) deliverOrder(args []string) error {
 	orderIds := strings.Split(order_ids, ",")
 	var ids []int
 	for _, numStr := range orderIds {
-		num, err := strconv.Atoi(numStr)
+		id, err := strconv.Atoi(numStr)
 		if err != nil {
 			return customErrors.ErrIdNotFound
 		}
-		ids = append(ids, num)
+		ids = append(ids, id)
+		c.lockOrder(id)
+		defer c.unlockOrder(id)
 	}
 
 	orders, err := c.Module.DeliverOrder(ids, id_receiver)
@@ -236,7 +397,7 @@ func (c CLI) deliverOrder(args []string) error {
 }
 
 //Найти заказ
-func (c CLI) findOrder(args []string) error {
+func (c *CLI) findOrder(args []string) error {
 	var id int
 	fs := flag.NewFlagSet(findOrder, flag.ContinueOnError)
 	fs.IntVar(&id, "id", 0, "use --id=1")
@@ -259,16 +420,15 @@ func (c CLI) findOrder(args []string) error {
 }
 
 //Помощь
-func (c CLI) help() {
+func (c *CLI) help() {
 	fmt.Println("command list:")
 	for _, cmd := range c.commandList {
 		fmt.Println("", cmd.name, cmd.description)
 	}
-	return
 }
 
 //Получить список заказов по получателю
-func (c CLI) OrdersByCustomer(args[]string) error {
+func (c *CLI) OrdersByCustomer(args[]string) error {
 	var id_receiver, amount int
 	fs := flag.NewFlagSet(OrdersByCustomer, flag.ContinueOnError)
 	fs.IntVar(&id_receiver, "id_receiver", 0, "use --id_receiver=1")
@@ -294,7 +454,7 @@ func (c CLI) OrdersByCustomer(args[]string) error {
 }
 
 //Вернуть заказ
-func (c CLI) Refund(args []string) error {
+func (c *CLI) Refund(args []string) error {
 	var id_receiver, id int
 	fs := flag.NewFlagSet(Refund, flag.ContinueOnError)
 	fs.IntVar(&id_receiver, "id_receiver", 0, "use --id_receiver=1")
@@ -312,6 +472,8 @@ func (c CLI) Refund(args []string) error {
 		return customErrors.ErrIdNotFound
 	}
 
+	c.lockOrder(id)
+	defer c.unlockOrder(id)
 	err := c.Module.Refund(id, id_receiver)
 	if err != nil {
 		return err
@@ -321,7 +483,7 @@ func (c CLI) Refund(args []string) error {
 }
 
 //Список возвратов
-func (c CLI) listRefund(args []string) error {
+func (c *CLI) listRefund(args []string) error {
 	var page, page_size int
 	fs := flag.NewFlagSet(listRefund, flag.ContinueOnError)
 	fs.IntVar(&page, "page", 0, "use --id_receiver=1")

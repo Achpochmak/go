@@ -10,7 +10,8 @@ const (
 	findOrder   = "find"
 	Refund = "refund"
 	listRefund = "listrefund"
-	exit ="exit"
+	exit = "exit"
+	setWorkers = "setworkers"
 )
 
 type command struct {
