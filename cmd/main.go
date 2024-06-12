@@ -18,7 +18,7 @@ func main() {
 		Storage: storageJSON,
 	})
 	commands := cli.NewCLI(cli.Deps{Module: pvz})
-	
+
 	for {
 		if err := commands.Run(); err != nil {
 			fmt.Println(err)
@@ -26,5 +26,3 @@ func main() {
 		fmt.Println("done")
 	}
 }
-
-

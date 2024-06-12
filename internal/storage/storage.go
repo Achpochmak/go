@@ -6,17 +6,19 @@ import (
 	"os"
 
 	"HOMEWORK-1/internal/models"
+	"HOMEWORK-1/internal/models/customErrors"
 )
 
 type Storage struct {
 	fileName string
 }
 
-// NewStorage .. TODO сделать описание функции
+// Новое хранилище
 func NewStorage(fileName string) Storage {
 	return Storage{fileName: fileName}
 }
 
+// Добавить заказ
 func (s Storage) AddOrder(order models.Order) error {
 	if _, err := os.Stat(s.fileName); errors.Is(err, os.ErrNotExist) {
 		// создаем файл
@@ -45,6 +47,7 @@ func (s Storage) AddOrder(order models.Order) error {
 	return os.WriteFile(s.fileName, bWrite, 0666)
 }
 
+//Перезаписать файл
 func (s Storage) ReWrite(orders []models.Order) error {
 	if _, err := os.Stat(s.fileName); errors.Is(err, os.ErrNotExist) {
 		// создаем файл
@@ -64,6 +67,7 @@ func (s Storage) ReWrite(orders []models.Order) error {
 	return os.WriteFile(s.fileName, bWrite, 0666)
 }
 
+//Обновить заказ
 func (s Storage) UpdateOrder(order models.Order) error {
 	b, err := os.ReadFile(s.fileName)
 	if err != nil {
@@ -74,7 +78,7 @@ func (s Storage) UpdateOrder(order models.Order) error {
 		return errUnmarshal
 	}
 	for i, record := range records {
-		if models.Id(record.Id) == order.Id {
+		if models.ID(record.ID) == order.ID {
 			records[i] = transform(order)
 			break
 		}
@@ -87,7 +91,8 @@ func (s Storage) UpdateOrder(order models.Order) error {
 	return os.WriteFile(s.fileName, bWrite, 0666)
 }
 
-func (s Storage) FindOrder(id models.Id) (models.Order, error) { 
+//Получить заказ по ID
+func (s Storage) GetOrderByID(id models.ID) (models.Order, error) {
 	b, err := os.ReadFile(s.fileName)
 	if err != nil {
 		return models.Order{}, err
@@ -98,14 +103,15 @@ func (s Storage) FindOrder(id models.Id) (models.Order, error) {
 	}
 
 	for _, record := range records {
-		if models.Id(record.Id) == id {
+		if models.ID(record.ID) == id {
 			return record.toDomain(), nil
 		}
 	}
 
-	return models.Order{}, errors.New("name not found")
+	return models.Order{}, customErrors.ErrIDNotFound
 }
 
+//Получить список всех заказов
 func (s Storage) ListOrder() ([]models.Order, error) {
 	b, err := os.ReadFile(s.fileName)
 	if err != nil {
@@ -123,6 +129,7 @@ func (s Storage) ListOrder() ([]models.Order, error) {
 	return result, nil
 }
 
+//Создать файл
 func (s Storage) createFile() error {
 	f, err := os.Create(s.fileName)
 	if err != nil {

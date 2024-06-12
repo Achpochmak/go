@@ -3,101 +3,65 @@ package cli
 import (
 	"bufio"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"HOMEWORK-1/internal/models"
-	"HOMEWORK-1/internal/models/customErrors"
 	"HOMEWORK-1/pkg/hash"
 )
 
-type Module interface {
-	AddOrder(order models.Order) error
-	ListOrder() ([]models.Order, error)
-	DeleteOrder(order models.Order) error
-	DeliverOrder([]int, int) ([]models.Order,error)
-	FindOrder(models.Id) (models.Order, error)
-	OrdersByCustomer(int, int)([]models.Order, error)
-	Refund(int, int)(error)
-	ListRefund() ([]models.Order, error)
-}
-
-type Deps struct {
-	Module Module
-}
-
-type CLI struct {
-	Deps
-	commandList []command
-	taskQueue chan task
-	notifications chan string
-	workerPool    chan struct{}
-	numWorkers int
-	mu sync.Mutex
-	wg sync.WaitGroup
-	orderLocks  map[models.Id]*sync.Mutex
-}
-
-type task struct {
-	commandName string
-	args        []string
-}
-
 // NewCLI creates a command line interface
 func NewCLI(d Deps) *CLI {
-	cli:=&CLI{
+	cli := &CLI{
 		Deps: d,
 		commandList: []command{
 			{
 				name:        help,
-				description: "справка",
+				description: help_description,
 			},
 			{
 				name:        addOrder,
-				description: "добавить заказ: использование add --id=1 --id_receiver=1 --storage_time=2025-06-15T15:04:05Z",
+				description: addOrder_description,
 			},
 			{
 				name:        deleteOrder,
-				description: "удалить заказ: использование delete --id=1",
+				description: deleteOrder_description,
 			},
 			{
 				name:        deliverOrder,
-				description: "доставить заказ: использование deliver --id=1,2,3 --id_receive=1",
+				description: deliverOrder_description,
 			},
 			{
-				name:        findOrder,
-				description: "найти заказ: использование find --id=1",
+				name:        GetOrderByID,
+				description: GetOrderByID_description,
 			},
 			{
 				name:        listOrder,
-				description: "вывести список заказов: использование list",
+				description: listOrder_description,
 			},
 			{
-				name:        Refund,
-				description: "вернуть заказ: использование refund --id_receiver=1 --id=1",
+				name:        refund,
+				description: refund_description,
 			},
 			{
 				name:        listRefund,
-				description: "вывести список возвратов: использование refund (опционально:--page=1 --page_size=1)",
+				description: listRefund_description,
 			},
 			{
 				name:        setWorkers,
-				description: "вывести список возвратов: использование setWorkers --num=5",
+				description: setWorkers_description,
 			},
 		},
-		taskQueue: make(chan task, 10),
-		numWorkers: 2,
-		workerPool: make(chan struct{}, 2),
-		orderLocks: make(map[models.Id]*sync.Mutex),
+		taskQueue:     make(chan task, 10),
+		numWorkers:    2,
+		workerPool:    make(chan struct{}, 2),
+		orderLocks:    make(map[models.ID]*sync.Mutex),
 		notifications: make(chan string, 10),
-			
 	}
 	go cli.notificationHandler()
 	return cli
@@ -139,7 +103,7 @@ func (c *CLI) Run() error {
 	return nil
 }
 
-//Обработка уведомлений
+// Обработка уведомлений
 func (c *CLI) notificationHandler() {
 	for msg := range c.notifications {
 		fmt.Println(msg)
@@ -149,6 +113,7 @@ func (c *CLI) notificationHandler() {
 func (c *CLI) worker() {
 	defer c.wg.Done()
 	for t := range c.taskQueue {
+		var err error
 		startMsg := fmt.Sprintf("Началась обработка команды: %s", t.commandName)
 		endMsg := fmt.Sprintf("Завершилась обработка команды: %s", t.commandName)
 		c.notifications <- startMsg
@@ -157,41 +122,23 @@ func (c *CLI) worker() {
 		case help:
 			c.help()
 		case addOrder:
-			if err := c.addOrder(t.args); err != nil {
-				fmt.Println("Ошибка:", err)
-			}
+			err = c.addOrder(t.args)
 		case deleteOrder:
-			if err := c.deleteOrder(t.args); err != nil {
-				fmt.Println("Ошибка:", err)
-			}
+			err = c.deleteOrder(t.args)
 		case deliverOrder:
-			if err := c.deliverOrder(t.args); err != nil {
-				fmt.Println("Ошибка:", err)
-			}		
+			err = c.deliverOrder(t.args)
 		case listOrder:
-			if err := c.listOrder(); err != nil {
-				fmt.Println("Ошибка:", err)
-			}
-		case findOrder:
-			if err := c.findOrder(t.args); err != nil {
-				fmt.Println("Ошибка:", err)
-			}
-		case OrdersByCustomer:
-			if err := c.OrdersByCustomer(t.args); err != nil {
-				fmt.Println("Ошибка:", err)
-			}		
-		case Refund:
-			if err := c.Refund(t.args); err != nil {
-				fmt.Println("Ошибка:", err)
-			}		
+			err = c.listOrder()
+		case GetOrderByID:
+			err = c.GetOrderByID(t.args)
+		case getOrdersByCustomer:
+			err = c.getOrdersByCustomer(t.args)
+		case refund:
+			err = c.refund(t.args)
 		case listRefund:
-			if err := c.listRefund(t.args); err != nil {
-				fmt.Println("Ошибка:", err)
-			}
+			err = c.listRefund(t.args)
 		case setWorkers:
-			if err := c.setWorkers(t.args); err != nil {
-				fmt.Println("Ошибка:", err)
-			}		
+			err = c.setWorkers(t.args)
 		case exit:
 			fmt.Println("Exiting...")
 			c.mu.Unlock()
@@ -200,12 +147,14 @@ func (c *CLI) worker() {
 		default:
 			fmt.Println("command isn't set")
 		}
+		if err != nil {
+			fmt.Println("Ошибка:", err)
+		}
 		c.notifications <- endMsg
-		
 	}
 }
 
-//Обработка сигналов
+// Обработка сигналов
 func (c *CLI) handleSignals() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -218,37 +167,21 @@ func (c *CLI) handleSignals() {
 	}()
 }
 
-//Заблокировать заказ
+// Заблокировать заказ
 func (c *CLI) lockOrder(id int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if _, exists := c.orderLocks[models.Id(id)]; !exists {
-		c.orderLocks[models.Id(id)] = &sync.Mutex{}
+	if _, exists := c.orderLocks[models.ID(id)]; !exists {
+		c.orderLocks[models.ID(id)] = &sync.Mutex{}
 	}
-	c.orderLocks[models.Id(id)].Lock()
+	c.orderLocks[models.ID(id)].Lock()
 }
 
-//Разблокировать заказ
-func (c *CLI) unlockOrder(id int) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if lock, exists := c.orderLocks[models.Id(id)]; exists {
-		lock.Unlock()
-	}
-}
-
-//Измнение числа рутин
+// Измeнение числа рутин
 func (c *CLI) setWorkers(args []string) error {
-	var num int
-	fs := flag.NewFlagSet("setWorkers", flag.ContinueOnError)
-	fs.IntVar(&num, "num", c.numWorkers, "use --num=1")
-
-	if err := fs.Parse(args); err != nil {
+	num, err := c.parseSetWorkers(args)
+	if err != nil {
 		return err
-	}
-
-	if num < 1 {
-		return errors.New("количество должно быть 1")
 	}
 
 	c.mu.Lock()
@@ -270,56 +203,26 @@ func (c *CLI) setWorkers(args []string) error {
 	return nil
 }
 
-//Добавить заказ
+// Добавить заказ
 func (c *CLI) addOrder(args []string) error {
-	var id, id_receiver int
-	var storage_time string
-	fs := flag.NewFlagSet(addOrder, flag.ContinueOnError)
-	fs.IntVar(&id, "id", 0, "use --id=1")
-	fs.IntVar(&id_receiver, "id_receiver", 0, "use --id_receiver=1")
-	fs.StringVar(&storage_time, "storage_time", "", "use --storage_time=2025-06-15T15:04:05Z")
-
-	if err := fs.Parse(args); err != nil {
+	id, id_receiver, st, err := c.parseAddOrder(args)
+	if err != nil {
 		return err
 	}
 
-	if id == 0 {
-		return customErrors.ErrIdNotFound
-	}
-	
-	order, err := c.Module.FindOrder(models.Id(id))
-	if err == nil {
-		fmt.Printf("Id заказа: %d\nId получателя: %d\nВремя хранения: %s\n", order.Id, order.Id_receiver, order.Storage_time)
-		return errors.New("заказ дублируется")
-	}
-
-	if id_receiver == 0 {
-		return customErrors.ErrReceiverNotFound
-	}
-
-	st, err := time.Parse(time.RFC3339, storage_time)
-	if err != nil {
-		return errors.New("неправильный формат времени")
-	}
-
-	if !time.Now().Before(st){
-		return errors.New("время хранения окончилось")
-	}
-
 	c.lockOrder(id)
-	defer c.unlockOrder(id)
 
 	return c.Module.AddOrder(models.Order{
-		Id:      models.Id(id),
-		Id_receiver: models.Id(id_receiver),
+		ID:           models.ID(id),
+		ID_receiver:  models.ID(id_receiver),
 		Storage_time: st,
-		Delivered: false,
-		Created_at: time.Now(),
-		Hash: hash.GenerateHash(),
+		Delivered:    false,
+		Created_at:   time.Now(),
+		Hash:         hash.GenerateHash(),
 	})
-	}
+}
 
-//Список заказов
+// Список заказов
 func (c *CLI) listOrder() error {
 	list, err := c.Module.ListOrder()
 	if err != nil {
@@ -327,99 +230,67 @@ func (c *CLI) listOrder() error {
 	}
 
 	for _, order := range list {
-		fmt.Printf("Id заказа: %d\nId получателя: %d\nВремя хранения: %s\n", order.Id, order.Id_receiver, order.Storage_time)
+		fmt.Printf("ID заказа: %d\nID получателя: %d\nВремя хранения: %s\n", order.ID, order.ID_receiver, order.Storage_time)
 	}
 	return nil
 }
 
-//Удалить заказ
+// Удалить заказ
 func (c *CLI) deleteOrder(args []string) error {
-	var id int
-	fs := flag.NewFlagSet(deleteOrder, flag.ContinueOnError)
-	fs.IntVar(&id, "id", 0, "use --id=1")
-
-	if err := fs.Parse(args); err != nil {
+	id, err := c.parseID(args)
+	if err != nil {
 		return err
 	}
 
-	if id == 0 {
-		return customErrors.ErrIdNotFound
-	}
+	order, err := c.Module.GetOrderByID(models.ID(id))
 
-	order, err := c.Module.FindOrder(models.Id(id))
-	
 	if err != nil {
 		return err
 	}
 	c.lockOrder(id)
-	defer c.unlockOrder(id)
 
 	return c.Module.DeleteOrder(models.Order(order))
 }
 
-//Доставить заказ
+// Доставить заказ
 func (c *CLI) deliverOrder(args []string) error {
-	var id_receiver int
-	var order_ids string
-	fs := flag.NewFlagSet(deliverOrder, flag.ContinueOnError)
-	fs.IntVar(&id_receiver, "id_receiver", 0, "use --id=1")
-	fs.StringVar(&order_ids, "id", "", "use --id=1,2,3")
-
-	if err := fs.Parse(args); err != nil {
+	orderIDs, id_receiver, err := c.parseDeliverOrder(args)
+	if err != nil {
 		return err
 	}
 
-	if id_receiver == 0 {
-		return customErrors.ErrReceiverNotFound
-	}
-
-	orderIds := strings.Split(order_ids, ",")
-	var ids []int
-	for _, numStr := range orderIds {
-		id, err := strconv.Atoi(numStr)
-		if err != nil {
-			return customErrors.ErrIdNotFound
-		}
-		ids = append(ids, id)
+	for _, id := range orderIDs {
 		c.lockOrder(id)
-		defer c.unlockOrder(id)
 	}
 
-	orders, err := c.Module.DeliverOrder(ids, id_receiver)
+	orders, err := c.Module.DeliverOrder(orderIDs, id_receiver)
 	if err != nil {
 		return err
 	}
 
-	for _,order:=range orders{
-		fmt.Printf("Id заказа: %d\nId получателя: %d\nВремя хранения: %s\n", order.Id, order.Id_receiver, order.Storage_time)
+	for _, order := range orders {
+		fmt.Printf("ID заказа: %d\nID получателя: %d\nВремя хранения: %s\n", order.ID, order.ID_receiver, order.Storage_time)
 	}
 	return nil
 }
 
-//Найти заказ
-func (c *CLI) findOrder(args []string) error {
-	var id int
-	fs := flag.NewFlagSet(findOrder, flag.ContinueOnError)
-	fs.IntVar(&id, "id", 0, "use --id=1")
-
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
-	if id == 0 {
-		return customErrors.ErrIdNotFound
-	}
-
-	order, err := c.Module.FindOrder(models.Id(id))
+// Найти заказ
+func (c *CLI) GetOrderByID(args []string) error {
+	id, err := c.parseID(args)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Id заказа: %d\nId получателя: %d\nВремя хранения: %s\n", order.Id, order.Id_receiver, order.Storage_time)
+	order, err := c.Module.GetOrderByID(models.ID(id))
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("ID заказа: %d\nID получателя: %d\nВремя хранения: %s\n", order.ID, order.ID_receiver, order.Storage_time)
 	return nil
 }
 
-//Помощь
+// Помощь
 func (c *CLI) help() {
 	fmt.Println("command list:")
 	for _, cmd := range c.commandList {
@@ -427,69 +298,44 @@ func (c *CLI) help() {
 	}
 }
 
-//Получить список заказов по получателю
-func (c *CLI) OrdersByCustomer(args[]string) error {
-	var id_receiver, amount int
-	fs := flag.NewFlagSet(OrdersByCustomer, flag.ContinueOnError)
-	fs.IntVar(&id_receiver, "id_receiver", 0, "use --id_receiver=1")
-	fs.IntVar(&amount, "n", 0, "use --n=1")
-
-	if err := fs.Parse(args); err != nil {
+// Получить список заказов по получателю
+func (c *CLI) getOrdersByCustomer(args []string) error {
+	id_receiver, amount, err := c.parseGetOrdersByCustomer(args)
+	if err != nil {
 		return err
 	}
 
-	if id_receiver == 0 {
-		return customErrors.ErrReceiverNotFound
-	}
-
-	list, err := c.Module.OrdersByCustomer(id_receiver, amount)
+	list, err := c.Module.GetOrdersByCustomer(id_receiver, amount)
 	if err != nil {
 		return err
 	}
 
 	for _, order := range list {
-		fmt.Printf("Id заказа: %d\nId получателя: %d\nВремя хранения: %s\n", order.Id, order.Id_receiver, order.Storage_time)
+		fmt.Printf("ID заказа: %d\nID получателя: %d\nВремя хранения: %s\n", order.ID, order.ID_receiver, order.Storage_time)
 	}
 	return nil
 }
 
-//Вернуть заказ
-func (c *CLI) Refund(args []string) error {
-	var id_receiver, id int
-	fs := flag.NewFlagSet(Refund, flag.ContinueOnError)
-	fs.IntVar(&id_receiver, "id_receiver", 0, "use --id_receiver=1")
-	fs.IntVar(&id, "id", 0, "use --id=1")
-
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
-	if id_receiver == 0 {
-		return customErrors.ErrReceiverNotFound
-	}
-
-	if id == 0 {
-		return customErrors.ErrIdNotFound
-	}
-
-	c.lockOrder(id)
-	defer c.unlockOrder(id)
-	err := c.Module.Refund(id, id_receiver)
+// Вернуть заказ
+func (c *CLI) refund(args []string) error {
+	id, id_receiver, err := c.parseRefund(args)
 	if err != nil {
 		return err
 	}
-	
+
+	c.lockOrder(id)
+	err = c.Module.Refund(id, id_receiver)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-//Список возвратов
+// Список возвратов
 func (c *CLI) listRefund(args []string) error {
-	var page, page_size int
-	fs := flag.NewFlagSet(listRefund, flag.ContinueOnError)
-	fs.IntVar(&page, "page", 0, "use --id_receiver=1")
-	fs.IntVar(&page_size, "page_size", 0, "use --id=1")
-
-	if err := fs.Parse(args); err != nil {
+	page, page_size, err := c.parseListRefund(args)
+	if err != nil {
 		return err
 	}
 
@@ -498,22 +344,22 @@ func (c *CLI) listRefund(args []string) error {
 		return err
 	}
 
-	if page == 0 || page_size==0 {	
+	if page == 0 || page_size == 0 {
 		for _, order := range list {
-			fmt.Printf("Id заказа: %d\nId получателя: %d\nВремя хранения: %s\n", order.Id, order.Id_receiver, order.Storage_time)
+			fmt.Printf("ID заказа: %d\nID получателя: %d\nВремя хранения: %s\n", order.ID, order.ID_receiver, order.Storage_time)
 		}
 		return nil
 	}
 
-	start:=(page-1)*page_size
-	end:= start+page_size
+	start := (page - 1) * page_size
+	end := start + page_size
 
-	if end>len(list) || start<0{
+	if end > len(list) || start < 0 {
 		return errors.New("пустая страница")
 	}
 
-	for _, order := range list[start: end] {
-		fmt.Printf("Id заказа: %d\nId получателя: %d\nВремя хранения: %s\n", order.Id, order.Id_receiver, order.Storage_time)
+	for _, order := range list[start:end] {
+		fmt.Printf("ID заказа: %d\nID получателя: %d\nВремя хранения: %s\n", order.ID, order.ID_receiver, order.Storage_time)
 	}
 	return nil
 }
