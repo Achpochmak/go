@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -69,9 +70,11 @@ func NewCLI(d Deps) *CLI {
 
 // Run ..
 func (c *CLI) Run() error {
+	ctx := context.Background() 
+
 	for i := 0; i < c.numWorkers; i++ {
 		c.wg.Add(1)
-		go c.worker()
+		go c.worker(ctx)
 	}
 
 	c.handleSignals()
@@ -110,7 +113,7 @@ func (c *CLI) notificationHandler() {
 	}
 }
 
-func (c *CLI) worker() {
+func (c *CLI) worker(ctx context.Context) {
 	defer c.wg.Done()
 	for t := range c.taskQueue {
 		var err error
@@ -122,21 +125,21 @@ func (c *CLI) worker() {
 		case help:
 			c.help()
 		case addOrder:
-			err = c.addOrder(t.args)
+			err = c.addOrder(ctx,t.args)
 		case deleteOrder:
-			err = c.deleteOrder(t.args)
+			err = c.deleteOrder(ctx,t.args)
 		case deliverOrder:
-			err = c.deliverOrder(t.args)
+			err = c.deliverOrder(ctx,t.args)
 		case listOrder:
-			err = c.listOrder()
+			err = c.listOrder(ctx)
 		case GetOrderByID:
-			err = c.GetOrderByID(t.args)
+			err = c.GetOrderByID(ctx,t.args)
 		case getOrdersByCustomer:
-			err = c.getOrdersByCustomer(t.args)
+			err = c.getOrdersByCustomer(ctx,t.args)
 		case refund:
-			err = c.refund(t.args)
+			err = c.refund(ctx,t.args)
 		case listRefund:
-			err = c.listRefund(t.args)
+			err = c.listRefund(ctx,t.args)
 		case setWorkers:
 			err = c.setWorkers(t.args)
 		case exit:
@@ -167,15 +170,7 @@ func (c *CLI) handleSignals() {
 	}()
 }
 
-// Заблокировать заказ
-func (c *CLI) lockOrder(id int) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if _, exists := c.orderLocks[models.ID(id)]; !exists {
-		c.orderLocks[models.ID(id)] = &sync.Mutex{}
-	}
-	c.orderLocks[models.ID(id)].Lock()
-}
+
 
 // Измeнение числа рутин
 func (c *CLI) setWorkers(args []string) error {
@@ -190,7 +185,7 @@ func (c *CLI) setWorkers(args []string) error {
 	if num > c.numWorkers {
 		for i := c.numWorkers; i < num; i++ {
 			c.wg.Add(1)
-			go c.worker()
+			go c.worker(context.Background())
 		}
 	} else if num < c.numWorkers {
 		for i := num; i < c.numWorkers; i++ {
@@ -204,15 +199,14 @@ func (c *CLI) setWorkers(args []string) error {
 }
 
 // Добавить заказ
-func (c *CLI) addOrder(args []string) error {
-	id, id_receiver, st, err := c.parseAddOrder(args)
+func (c *CLI) addOrder(ctx context.Context,args []string) error {
+	id, id_receiver, st, err := c.parseAddOrder(ctx, args)
 	if err != nil {
 		return err
 	}
 
-	c.lockOrder(id)
 
-	return c.Module.AddOrder(models.Order{
+	return c.Module.AddOrder(ctx,models.Order{
 		ID:           models.ID(id),
 		ID_receiver:  models.ID(id_receiver),
 		Storage_time: st,
@@ -223,8 +217,8 @@ func (c *CLI) addOrder(args []string) error {
 }
 
 // Список заказов
-func (c *CLI) listOrder() error {
-	list, err := c.Module.ListOrder()
+func (c *CLI) listOrder(ctx context.Context) error {
+	list, err := c.Module.ListOrder(ctx)
 	if err != nil {
 		return err
 	}
@@ -236,34 +230,29 @@ func (c *CLI) listOrder() error {
 }
 
 // Удалить заказ
-func (c *CLI) deleteOrder(args []string) error {
+func (c *CLI) deleteOrder(ctx context.Context,args []string) error {
 	id, err := c.parseID(args)
 	if err != nil {
 		return err
 	}
 
-	order, err := c.Module.GetOrderByID(models.ID(id))
+	order, err := c.Module.GetOrderByID(ctx, models.ID(id))
 
 	if err != nil {
 		return err
 	}
-	c.lockOrder(id)
 
-	return c.Module.DeleteOrder(models.Order(order))
+	return c.Module.DeleteOrder(ctx, models.Order(order))
 }
 
 // Доставить заказ
-func (c *CLI) deliverOrder(args []string) error {
+func (c *CLI) deliverOrder(ctx context.Context,args []string) error {
 	orderIDs, id_receiver, err := c.parseDeliverOrder(args)
 	if err != nil {
 		return err
 	}
 
-	for _, id := range orderIDs {
-		c.lockOrder(id)
-	}
-
-	orders, err := c.Module.DeliverOrder(orderIDs, id_receiver)
+	orders, err := c.Module.DeliverOrder(ctx, orderIDs, id_receiver)
 	if err != nil {
 		return err
 	}
@@ -275,13 +264,13 @@ func (c *CLI) deliverOrder(args []string) error {
 }
 
 // Найти заказ
-func (c *CLI) GetOrderByID(args []string) error {
+func (c *CLI) GetOrderByID(ctx context.Context,args []string) error {
 	id, err := c.parseID(args)
 	if err != nil {
 		return err
 	}
 
-	order, err := c.Module.GetOrderByID(models.ID(id))
+	order, err := c.Module.GetOrderByID(ctx, models.ID(id))
 	if err != nil {
 		return err
 	}
@@ -299,13 +288,13 @@ func (c *CLI) help() {
 }
 
 // Получить список заказов по получателю
-func (c *CLI) getOrdersByCustomer(args []string) error {
+func (c *CLI) getOrdersByCustomer(ctx context.Context,args []string) error {
 	id_receiver, amount, err := c.parseGetOrdersByCustomer(args)
 	if err != nil {
 		return err
 	}
 
-	list, err := c.Module.GetOrdersByCustomer(id_receiver, amount)
+	list, err := c.Module.GetOrdersByCustomer(ctx, id_receiver, amount)
 	if err != nil {
 		return err
 	}
@@ -317,14 +306,13 @@ func (c *CLI) getOrdersByCustomer(args []string) error {
 }
 
 // Вернуть заказ
-func (c *CLI) refund(args []string) error {
+func (c *CLI) refund(ctx context.Context,args []string) error {
 	id, id_receiver, err := c.parseRefund(args)
 	if err != nil {
 		return err
 	}
 
-	c.lockOrder(id)
-	err = c.Module.Refund(id, id_receiver)
+	err = c.Module.Refund(ctx, id, id_receiver)
 	if err != nil {
 		return err
 	}
@@ -333,13 +321,13 @@ func (c *CLI) refund(args []string) error {
 }
 
 // Список возвратов
-func (c *CLI) listRefund(args []string) error {
+func (c *CLI) listRefund(ctx context.Context,args []string) error {
 	page, page_size, err := c.parseListRefund(args)
 	if err != nil {
 		return err
 	}
 
-	list, err := c.Module.ListRefund()
+	list, err := c.Module.ListRefund(ctx)
 	if err != nil {
 		return err
 	}

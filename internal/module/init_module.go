@@ -1,17 +1,22 @@
 package module
 
-import "HOMEWORK-1/internal/models"
+import (
+	"HOMEWORK-1/internal/models"
+	"context"
+)
 
-type Storage interface {
-	AddOrder(Order models.Order) error
-	ListOrder() ([]models.Order, error)
-	ReWrite(Orders []models.Order) error
-	GetOrderByID(ID models.ID) (models.Order, error)
-	UpdateOrder(Order models.Order) error
+type Repository interface {
+	AddOrder(context.Context, models.Order) error
+	ListOrder(context.Context) ([]models.Order, error)
+	GetOrderByID(context.Context,  models.ID) (models.Order, error)
+	UpdateOrder(context.Context,  models.Order) error
+	DeleteOrder(context.Context,  models.ID) error
+	ListRefund(context.Context)([]models.Order, error)
+	GetOrdersByCustomer(context.Context,  models.ID)([]models.Order, error)
 }
 
 type Deps struct {
-	Storage Storage
+	Repository Repository
 }
 
 type Module struct {

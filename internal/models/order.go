@@ -17,3 +17,6 @@ type Order struct {
 	Created_at     time.Time // время создания
 	Hash           string    // хеш
 }
+
+
+

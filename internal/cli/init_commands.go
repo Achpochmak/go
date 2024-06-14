@@ -2,6 +2,7 @@ package cli
 
 import (
 	"HOMEWORK-1/internal/models"
+	"context"
 	"sync"
 )
 
@@ -21,9 +22,9 @@ const (
 
 const (
 	help_description                = "справка"
-	addOrder_description            = "добавить заказ: использование add --id=1 --id_receiver=1 --storage_time=2025-06-15T15:04:05Z"
+	addOrder_description            = "добавить заказ: использование add --id=2 --id_receiver=1 --storage_time=2025-06-15T15:04:05Z"
 	deleteOrder_description         = "удалить заказ: использование delete --id=1"
-	deliverOrder_description        = "доставить заказ: использование deliver --id=1,2,3 --id_receive=1"
+	deliverOrder_description        = "доставить заказ: использование deliver --id=1 --id_receiver=1"
 	listOrder_description           = "вывести список заказов: использование list"
 	getOrdersByCustomer_description = "customer"
 	GetOrderByID_description        = "найти заказ: использование find --id=1"
@@ -38,14 +39,14 @@ type command struct {
 	description string
 }
 type Module interface {
-	AddOrder(order models.Order) error
-	ListOrder() ([]models.Order, error)
-	DeleteOrder(order models.Order) error
-	DeliverOrder([]int, int) ([]models.Order, error)
-	GetOrderByID(models.ID) (models.Order, error)
-	GetOrdersByCustomer(int, int) ([]models.Order, error)
-	Refund(int, int) error
-	ListRefund() ([]models.Order, error)
+	AddOrder( context.Context, models.Order) error
+	ListOrder( context.Context) ([]models.Order, error)
+	DeleteOrder( context.Context, models.Order) error
+	DeliverOrder(context.Context,[]int, int) ([]models.Order, error)
+	GetOrderByID(context.Context,models.ID) (models.Order, error)
+	GetOrdersByCustomer( context.Context,int, int) ([]models.Order, error)
+	Refund( context.Context,int, int) error
+	ListRefund(context.Context) ( []models.Order, error)
 }
 
 type Deps struct {

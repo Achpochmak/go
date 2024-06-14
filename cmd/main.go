@@ -1,21 +1,39 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"HOMEWORK-1/internal/cli"
 	"HOMEWORK-1/internal/module"
-	"HOMEWORK-1/internal/storage"
-)
+	"HOMEWORK-1/internal/repository"
+	"HOMEWORK-1/internal/repository/transactor"
 
-const (
-	fileName = "pvz.json"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 func main() {
-	storageJSON := storage.NewStorage(fileName)
+
+	dbURL := "postgres://postgres:password@localhost:5432/oms"
+	config, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		fmt.Println("ошибка url")
+	}
+
+	config.MaxConns = 10
+
+	pool, err := pgxpool.ConnectConfig(context.Background(), config)
+	if err != nil {
+		fmt.Println("нет соединения")
+	}
+	defer pool.Close()
+
+	tm := &transactor.TransactionManager{Pool: pool}
+
+	repo := repository.NewRepository(tm)
+
 	pvz := module.NewModule(module.Deps{
-		Storage: storageJSON,
+		Repository: repo,
 	})
 	commands := cli.NewCLI(cli.Deps{Module: pvz})
 
@@ -25,4 +43,5 @@ func main() {
 		}
 		fmt.Println("done")
 	}
+
 }

@@ -1,6 +1,8 @@
 package module
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"HOMEWORK-1/internal/models"
@@ -20,10 +22,11 @@ func (m Module) validateDeleteOrder(Order models.Order) error {
 }
 
 //Проверка параметров доставки
-func (m Module) validateDeliverOrder(order_ids []int, id_receiver int) ([]models.Order, error) {
+func (m Module) validateDeliverOrder(ctx context.Context, order_ids []int, id_receiver int) ([]models.Order, error) {
 	set := []models.Order{}
 	for _, id := range order_ids {
-		order, err := m.Storage.GetOrderByID(models.ID(id))
+		order, err := m.Repository.GetOrderByID(ctx, models.ID(id))
+		fmt.Println( order)
 		if err != nil {
 			return nil, customErrors.ErrOrderNotFound
 		}
@@ -46,8 +49,8 @@ func (m Module) validateDeliverOrder(order_ids []int, id_receiver int) ([]models
 }
 
 //Проверка параметров возврата
-func (m Module) validateRefund(id int, id_receiver int) (models.Order, error) {
-	order, err := m.Storage.GetOrderByID(models.ID(id))
+func (m Module) validateRefund(ctx context.Context, id int, id_receiver int) (models.Order, error) {
+	order, err := m.Repository.GetOrderByID(ctx, models.ID(id))
 
 	if err != nil {
 		return models.Order{}, customErrors.ErrOrderNotFound

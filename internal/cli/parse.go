@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"strconv"
@@ -28,7 +29,7 @@ func (c *CLI) parseSetWorkers(args []string) (int, error) {
 }
 
 // Парсинг параметров добавления заказа
-func (c *CLI) parseAddOrder(args []string) (int, int, time.Time, error) {
+func (c *CLI) parseAddOrder(ctx context.Context, args []string) (int, int, time.Time, error) {
 	var id, id_receiver int
 	var storage_time string
 	fs := flag.NewFlagSet(addOrder, flag.ContinueOnError)
@@ -44,7 +45,7 @@ func (c *CLI) parseAddOrder(args []string) (int, int, time.Time, error) {
 		return 0, 0, time.Now(), customErrors.ErrIDNotFound
 	}
 
-	order, err := c.Module.GetOrderByID(models.ID(id))
+	order, err := c.Module.GetOrderByID(ctx, models.ID(id))
 	if err == nil {
 		fmt.Printf("ID заказа: %d\nID получателя: %d\nВремя хранения: %s\n", order.ID, order.ID_receiver, order.Storage_time)
 		return 0, 0, time.Now(), customErrors.ErrOrderAlreadyExists
