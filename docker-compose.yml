@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
     hostname: server
     environment:
-      DATABASE_URL: postgres://postgres:password@postgres:5432/oms?sslmode=disable # должно быть в секретах/конфиге. Учебный пример
+      DATABASE_URL: postgres://postgres:password@localhost:5432/oms # должно быть в секретах/конфиге. Учебный пример
     ports:
       - 8080:8080
       # - 8090:8090

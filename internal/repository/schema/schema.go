@@ -5,13 +5,11 @@ import (
 )
 
 type OrderInfo struct {
-	ID           int          `db:"id"`
-	ID_receiver  int          `db:"id_receiver"`
-	Storage_time sql.NullTime `db:"storage_time"`
-	Delivered    bool         `db:"delivered"`
-	Refund       bool         `db:"refund"`
-	CreatedAt    sql.NullTime `db:"created_at"`
-	DeliveredAt  sql.NullTime `db:"delivered_at"`
+	ID          int          `db:"id"`
+	IDReceiver  int          `db:"idreceiver"`
+	StorageTime sql.NullTime `db:"storagetime"`
+	Delivered   bool         `db:"delivered"`
+	Refund      bool         `db:"refund"`
+	CreatedAt   sql.NullTime `db:"createdat"`
+	DeliveredAt sql.NullTime `db:"deliveredat"`
 }
-
-

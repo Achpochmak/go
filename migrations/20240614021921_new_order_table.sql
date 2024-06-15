@@ -2,12 +2,12 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS "orders" (
     id int PRIMARY KEY,
-    id_receiver int,
+    idReceiver int,
     delivered BOOLEAN,
     refund BOOLEAN,
-    delivered_at TIMESTAMP,
-    created_at TIMESTAMP,
-    storage_time TIMESTAMP
+    deliveredAt TIMESTAMP,
+    createdAt TIMESTAMP,
+    storageTime TIMESTAMP
 )
 -- +goose StatementEnd
 

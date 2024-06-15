@@ -11,21 +11,26 @@ const (
 )
 
 var (
-	orderColumns = []string{"id", "id_receiver", "storage_time", "delivered", "refund", "created_at", "delivered_at"}
+	orderColumns = []string{"id", "idReceiver", "storageTime", "delivered", "refund", "createdAt", "deliveredAt"}
 )
 
 type Repository struct {
 	transactor.QueryEngineProvider
 }
 
+
+func NewRepository(provider transactor.QueryEngineProvider) *Repository {
+	return &Repository{provider}
+}
+
 func toDomainOrder(order schema.OrderInfo) models.Order {
 	return models.Order{
-		ID:             models.ID(order.ID),
-		ID_receiver:    models.ID(order.ID_receiver),
-		Delivered:      order.Delivered,
-		Delivered_time: order.DeliveredAt.Time,
-		Refund:         order.Refund,
-		Created_at:     order.CreatedAt.Time,
-		Storage_time:   order.Storage_time.Time,
+		ID:           models.ID(order.ID),
+		IDReceiver:   models.ID(order.IDReceiver),
+		Delivered:    order.Delivered,
+		DeliveryTime: order.DeliveredAt.Time,
+		Refund:       order.Refund,
+		CreatedAt:    order.CreatedAt.Time,
+		StorageTime:  order.StorageTime.Time,
 	}
 }
