@@ -9,5 +9,4 @@ import (
 func (m Module) ListRefund(ctx context.Context, page int, pageSize int) ([]models.Order, error) {
 	refunds, err := m.Repository.ListRefund(ctx, page, pageSize)
 	return refunds, err
-
 }

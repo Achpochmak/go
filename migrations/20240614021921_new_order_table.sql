@@ -7,7 +7,10 @@ CREATE TABLE IF NOT EXISTS "orders" (
     refund BOOLEAN,
     deliveredAt TIMESTAMP,
     createdAt TIMESTAMP,
-    storageTime TIMESTAMP
+    storageTime TIMESTAMP,
+    weightKg FLOAT,
+    price FLOAT,
+    packaging VARCHAR(255)
 )
 -- +goose StatementEnd
 

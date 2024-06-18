@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
-
-	"HOMEWORK-1/internal/models"
+	"time"
 )
 
 // NewCLI creates a command line interface
@@ -56,7 +54,6 @@ func NewCLI(d Deps) *CLI {
 		taskQueue:     make(chan task, 10),
 		numWorkers:    2,
 		workerPool:    make(chan struct{}, 2),
-		orderLocks:    make(map[models.ID]*sync.Mutex),
 		notifications: make(chan string, 10),
 	}
 	go cli.notificationHandler()
@@ -65,14 +62,14 @@ func NewCLI(d Deps) *CLI {
 
 // Run ..
 func (c *CLI) Run() error {
-	ctx := context.Background()
-
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	for i := 0; i < c.numWorkers; i++ {
 		c.wg.Add(1)
 		go c.worker(ctx)
 	}
 
-	c.handleSignals()
+	c.handleSignals(cancel)
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -90,6 +87,10 @@ func (c *CLI) Run() error {
 		commandName := args[0]
 		if commandName == exit {
 			close(c.taskQueue)
+			go func() {
+				time.Sleep(5 * time.Second)
+				cancel()
+			}()
 			break
 		}
 		c.taskQueue <- task{commandName: commandName, args: args[1:]}

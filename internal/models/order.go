@@ -15,5 +15,7 @@ type Order struct {
 	Refund       bool      // был ли возврат
 	DeliveryTime time.Time // время доставки
 	CreatedAt    time.Time // время создания
-	Hash         string    // хеш
+	WeightKg     float64   //вес
+	Price        float64   //цена
+	Packaging    Packaging //упаковка
 }

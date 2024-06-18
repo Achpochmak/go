@@ -1,26 +1,27 @@
 package module
 
 import (
-	"HOMEWORK-1/internal/models"
-	"HOMEWORK-1/internal/models/customErrors"
-	"HOMEWORK-1/pkg/hash"
 	"context"
 	"time"
+	
+	"HOMEWORK-1/internal/models"
+	"HOMEWORK-1/internal/models/customErrors"
+
+	"github.com/pkg/errors"
 )
 
 // Возврат заказа
 func (m Module) Refund(ctx context.Context, id int, idReceiver int) error {
 	order, err := m.validateRefund(ctx, id, idReceiver)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "некорректные данные")
 	}
 
 	order.Delivered = false
 	order.Refund = true
-	order.Hash = hash.GenerateHash()
 
 	if err := m.Repository.UpdateOrder(ctx, order); err != nil {
-		return customErrors.ErrNotUpdated
+		return errors.Wrap(err, "не удалось обновить заказ")
 	}
 
 	return nil
@@ -31,7 +32,7 @@ func (m Module) validateRefund(ctx context.Context, id int, idReceiver int) (mod
 	order, err := m.Repository.GetOrderByID(ctx, models.ID(id))
 
 	if err != nil {
-		return models.Order{}, customErrors.ErrOrderNotFound
+		return models.Order{}, err
 	}
 
 	if !time.Now().Before(order.DeliveryTime.Add(refundTime)) {

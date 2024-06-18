@@ -6,6 +6,8 @@ import (
 
 	"HOMEWORK-1/internal/models"
 	"HOMEWORK-1/internal/models/customErrors"
+
+	"github.com/pkg/errors"
 )
 
 // Доставка заказа
@@ -13,25 +15,25 @@ func (m Module) DeliverOrder(ctx context.Context, ordersID []int, idReceiver int
 	set, err := m.validateDeliverOrder(ctx, ordersID, idReceiver)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "некорректные данные")
 	}
 	for _, order := range set {
 		order.Delivered = true
 		order.DeliveryTime = time.Now()
 		if err := m.Repository.UpdateOrder(ctx, order); err != nil {
-			return nil, customErrors.ErrNotUpdated
+			return nil, errors.Wrap(err, "не получилось обновить заказ")
 		}
 	}
 	return set, nil
 }
 
-//Проверка параметров доставки
+// Проверка параметров доставки
 func (m Module) validateDeliverOrder(ctx context.Context, ordersID []int, idReceiver int) ([]models.Order, error) {
 	set := []models.Order{}
 	for _, id := range ordersID {
 		order, err := m.Repository.GetOrderByID(ctx, models.ID(id))
 		if err != nil {
-			return nil, customErrors.ErrOrderNotFound
+			return nil, err
 		}
 
 		if !time.Now().Before(order.StorageTime) {

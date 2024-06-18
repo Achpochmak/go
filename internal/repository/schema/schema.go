@@ -12,4 +12,7 @@ type OrderInfo struct {
 	Refund      bool         `db:"refund"`
 	CreatedAt   sql.NullTime `db:"createdat"`
 	DeliveredAt sql.NullTime `db:"deliveredat"`
+	WeightKg    float64      `db:"weightkg"`
+	Price       float64      `db:"price"`
+	Packaging   string       `db:"packaging"`
 }

@@ -5,13 +5,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 // Получить список заказов по получателю
 func (c *CLI) getOrdersByCustomer(ctx context.Context, args []string) error {
 	idReceiver, amount, err := c.parseGetOrdersByCustomer(args)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "некорректный ввод")
 	}
 
 	list, err := c.Module.GetOrdersByCustomer(ctx, idReceiver, amount)

@@ -11,7 +11,7 @@ services:
     environment:
       POSTGRES_DB: oms
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD}
       PGDATA: "/var/lib/postgresql/data/pgdata"
     container_name: 'postgres-container'
     volumes:
@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
     hostname: server
     environment:
-      DATABASE_URL: postgres://postgres:password@localhost:5432/oms # должно быть в секретах/конфиге. Учебный пример
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@localhost:5432/oms # должно быть в секретах/конфиге. Учебный пример
     ports:
       - 8080:8080
       # - 8090:8090

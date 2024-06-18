@@ -1,26 +1,28 @@
 package cli
 
 import (
-	"HOMEWORK-1/internal/models/customErrors"
 	"context"
 	"flag"
 	"fmt"
+	
+	"HOMEWORK-1/internal/models/customErrors"
+
+	"github.com/pkg/errors"
 )
 
 // Измeнение числа рутин
 func (c *CLI) setWorkers(args []string) error {
 	num, err := c.parseSetWorkers(args)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "некорректный ввод")
 	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	if num > c.numWorkers {
 		for i := c.numWorkers; i < num; i++ {
 			c.wg.Add(1)
-			go c.worker(context.Background())
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			go c.worker(ctx)
 		}
 	} else if num < c.numWorkers {
 		for i := num; i < c.numWorkers; i++ {

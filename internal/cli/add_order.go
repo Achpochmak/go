@@ -3,72 +3,94 @@ package cli
 import (
 	"context"
 	"flag"
-	"fmt"
 	"time"
 
 	"HOMEWORK-1/internal/models"
 	"HOMEWORK-1/internal/models/customErrors"
-	"HOMEWORK-1/pkg/hash"
+
+	"github.com/pkg/errors"
 )
+
+type OrderParams struct {
+	ID          int
+	IDReceiver  int
+	StorageTime time.Time
+	Weight      float64
+	Price       float64
+	Packaging   models.Packaging
+}
 
 // Добавить заказ
 func (c *CLI) addOrder(ctx context.Context, args []string) error {
-	id, idReceiver, st, err := c.parseAddOrder(args)
+	params, err := c.parseAddOrder(args)
 	if err != nil {
-		return err
-	}
-	err = c.checkOrder(ctx, id, st)
-	if err != nil {
-		return err
+		return errors.Wrap(err, "некорректный ввод")
 	}
 
+
 	return c.Module.AddOrder(ctx, models.Order{
-		ID:          models.ID(id),
-		IDReceiver:  models.ID(idReceiver),
-		StorageTime: st,
+		ID:          models.ID(params.ID),
+		IDReceiver:  models.ID(params.IDReceiver),
+		StorageTime: params.StorageTime,
 		Delivered:   false,
+		Refund:      false,
 		CreatedAt:   time.Now(),
-		Hash:        hash.GenerateHash(),
+		WeightKg:    params.Weight,
+		Price:       params.Price,
+		Packaging:   params.Packaging,
 	})
 }
 
 // Парсинг параметров добавления заказа
-func (c *CLI) parseAddOrder(args []string) (int, int, time.Time, error) {
-	var id, idReceiver int
-	var storageTime string
-	fs := flag.NewFlagSet(addOrder, flag.ContinueOnError)
-	fs.IntVar(&id, "id", 0, "use --id=1")
-	fs.IntVar(&idReceiver, "idReceiver", 0, "use --idReceiver=1")
+func (c *CLI) parseAddOrder(args []string) (OrderParams, error) {
+	var params OrderParams
+	var storageTime, packagingType string
+
+	fs := flag.NewFlagSet("addOrder", flag.ContinueOnError)
+	fs.IntVar(&params.ID, "id", 0, "use --id=1")
+	fs.IntVar(&params.IDReceiver, "idReceiver", 0, "use --idReceiver=1")
 	fs.StringVar(&storageTime, "storageTime", "", "use --storageTime=2025-06-15T15:04:05Z")
+	fs.Float64Var(&params.Weight, "weightKg", 0, "use --weight=1")
+	fs.Float64Var(&params.Price, "price", 0, "use --price=1")
+	fs.StringVar(&packagingType, "packaging", "", "use --packaging=bag|box|film")
 
 	if err := fs.Parse(args); err != nil {
-		return 0, 0, time.Now(), err
+		return OrderParams{}, err
 	}
 
-	if id == 0 {
-		return 0, 0, time.Now(), customErrors.ErrIDNotFound
-	}
-
-	if idReceiver == 0 {
-		return 0, 0, time.Now(), customErrors.ErrReceiverNotFound
+	if err := validateOrderParams(params.ID, params.IDReceiver, params.Weight, params.Price, storageTime); err != nil {
+		return OrderParams{}, err
 	}
 
 	st, err := time.Parse(time.RFC3339, storageTime)
 	if err != nil {
-		return 0, 0, time.Now(), customErrors.ErrWrongTimeFormat
+		return OrderParams{}, customErrors.ErrWrongTimeFormat
+	}
+	params.StorageTime = st
+
+	params.Packaging, err = parsePackaging(packagingType)
+	if err != nil {
+		return OrderParams{}, err
 	}
 
-	return id, idReceiver, st, nil
+	return params, nil
 }
 
-func (c *CLI) checkOrder(ctx context.Context, id int, st time.Time) error {
-	order, err := c.Module.GetOrderByID(ctx, models.ID(id))
-	if err == nil {
-		fmt.Printf("ID заказа: %d\nID получателя: %d\nВремя хранения: %s\n", order.ID, order.IDReceiver, order.StorageTime)
-		return customErrors.ErrOrderAlreadyExists
+func validateOrderParams(id, idReceiver int, weight, price float64, storageTime string) error {
+	if id == 0 {
+		return customErrors.ErrIDNotFound
 	}
-	if time.Now().After(st) {
-		return customErrors.ErrStorageTimeEnded
+	if idReceiver == 0 {
+		return customErrors.ErrReceiverNotFound
+	}
+	if weight == 0 {
+		return customErrors.ErrWeightNotFound
+	}
+	if price == 0 {
+		return customErrors.ErrPriceNotFound
+	}
+	if storageTime == "" {
+		return customErrors.ErrStorageTimeNotFound
 	}
 	return nil
 }

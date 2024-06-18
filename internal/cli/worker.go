@@ -10,11 +10,8 @@ func (c *CLI) worker(ctx context.Context) {
 	defer c.wg.Done()
 	for t := range c.taskQueue {
 		var err error
-		startMsg := fmt.Sprintf("Началась обработка команды: %s", t.commandName)
-		endMsg := fmt.Sprintf("Завершилась обработка команды: %s", t.commandName)
-		c.notifications <- startMsg
+		c.sendStartNotification(t)
 		switch t.commandName {
-
 		case help:
 			c.help()
 		case addOrder:
@@ -37,7 +34,6 @@ func (c *CLI) worker(ctx context.Context) {
 			err = c.setWorkers(t.args)
 		case exit:
 			fmt.Println("Exiting...")
-			c.mu.Unlock()
 			close(c.taskQueue)
 			os.Exit(0)
 		default:
@@ -46,6 +42,7 @@ func (c *CLI) worker(ctx context.Context) {
 		if err != nil {
 			fmt.Println("Ошибка:", err)
 		}
-		c.notifications <- endMsg
+		c.sendEndNotification(t)
 	}
+
 }

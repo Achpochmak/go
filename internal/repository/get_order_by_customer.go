@@ -19,7 +19,7 @@ func (r *Repository) GetOrdersByCustomer(ctx context.Context, ID models.ID, amou
 	if amount > 0 {
 		query = query.Limit(uint64(amount))
 	}
-	
+
 	rawQuery, args, err := query.ToSql()
 	if err != nil {
 		return nil, err
