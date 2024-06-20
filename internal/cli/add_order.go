@@ -27,7 +27,6 @@ func (c *CLI) addOrder(ctx context.Context, args []string) error {
 		return errors.Wrap(err, "некорректный ввод")
 	}
 
-
 	return c.Module.AddOrder(ctx, models.Order{
 		ID:          models.ID(params.ID),
 		IDReceiver:  models.ID(params.IDReceiver),
@@ -93,4 +92,19 @@ func validateOrderParams(id, idReceiver int, weight, price float64, storageTime 
 		return customErrors.ErrStorageTimeNotFound
 	}
 	return nil
+}
+
+func parsePackaging(packagingType string) (models.Packaging, error) {
+	switch packagingType {
+	case "bag":
+		return models.Bag{}, nil
+	case "box":
+		return models.Box{}, nil
+	case "film":
+		return models.Film{}, nil
+	case "":
+		return models.NoPackaging{}, nil
+	default:
+		return models.NoPackaging{}, customErrors.ErrInvalidPackaging
+	}
 }

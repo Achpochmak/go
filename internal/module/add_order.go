@@ -31,10 +31,10 @@ func (m Module) AddOrder(ctx context.Context, Order models.Order) error {
 
 // Упаковать заказ
 func (m Module) packOrder(weight float64, price float64, packaging models.Packaging) (float64, error) {
-	if packaging.MaxWeight > 0 && weight > packaging.MaxWeight {
+	if packaging.GetMaxWeight() > 0 && weight > packaging.GetMaxWeight() {
 		return 0, customErrors.ErrWeightIsTooBig
 	}
-	totalPrice := price + packaging.Price
+	totalPrice := price + packaging.GetPrice()
 	return totalPrice, nil
 }
 

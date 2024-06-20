@@ -15,38 +15,45 @@ import (
 )
 
 func initConfig() {
-    viper.SetConfigName("docker-compose")
-    viper.SetConfigType("yaml")
-    viper.AddConfigPath(".")
-    if err := viper.ReadInConfig(); err != nil {
-        log.Fatalf("ошибка файла конфигурации")
-    }
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("ошибка файла конфигурации: %v", err)
+	}
 }
 
 func connectDB() *pgxpool.Pool {
-	dbURL := viper.GetString("services.app.environment.DATABASE_URL")
+
+	dbPassword := viper.GetString("database.password")
+	dbHost := viper.GetString("database.host")
+	dbPort := viper.GetInt("database.port")
+	dbUser := viper.GetString("database.user")
+	dbName := viper.GetString("database.dbname")
+
+	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", dbUser, dbPassword, dbHost, dbPort, dbName)
 	config, err := pgxpool.ParseConfig(dbURL)
 	if err != nil {
-		log.Fatalf("ошибка url")
+		log.Fatalf("ошибка url: %v", err)
 	}
-	config.MaxConns = 10
+	config.MaxConns = 30
 
 	pool, err := pgxpool.ConnectConfig(context.Background(), config)
 	if err != nil {
-		log.Fatalf("нет соединения")
+		log.Fatalf("нет соединения: %v", err)
 	}
 	return pool
 }
 
 func main() {
-    initConfig()
-    pool := connectDB()
+	initConfig()
+	pool := connectDB()
 	defer pool.Close()
-
 	tm := &transactor.TransactionManager{Pool: pool}
 	repo := repository.NewRepository(tm)
 	pvz := module.NewModule(module.Deps{
 		Repository: repo,
+		Transactor: tm,
 	})
 	commands := cli.NewCLI(cli.Deps{Module: pvz})
 
@@ -56,5 +63,4 @@ func main() {
 		}
 		fmt.Println("done")
 	}
-
 }

@@ -21,11 +21,12 @@ type TransactionManager struct {
 
 const key = "tx"
 
-func (tm *TransactionManager) RunRepeatebleRead(ctx context.Context, fx func(ctxTX context.Context) error) error {
+func (tm *TransactionManager) RunRepeatableRead(ctx context.Context, fx func(ctxTX context.Context) error) error {
 	tx, err := tm.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,
 		AccessMode: pgx.ReadWrite,
 	})
+	
 	if err != nil {
 		return err
 	}

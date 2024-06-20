@@ -1,14 +1,14 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS "orders" (
+CREATE TABLE IF NOT EXISTS orders (
     id int PRIMARY KEY,
-    idReceiver int,
+    id_receiver int,
     delivered BOOLEAN,
     refund BOOLEAN,
-    deliveredAt TIMESTAMP,
-    createdAt TIMESTAMP,
-    storageTime TIMESTAMP,
-    weightKg FLOAT,
+    delivered_at TIMESTAMP,
+    created_at TIMESTAMP,
+    storage_time TIMESTAMP,
+    weight_kg FLOAT,
     price FLOAT,
     packaging VARCHAR(255)
 )
