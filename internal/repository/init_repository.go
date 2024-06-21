@@ -13,10 +13,10 @@ const (
 var (
 	orderColumns = []string{"id", "id_receiver", "storage_time", "delivered", "refund", "created_at", "delivered_at", "weight_kg", "price", "packaging"}
 	packagingMap = map[string]models.Packaging{
-		"bag":  models.Bag{},
-		"box":  models.Box{},
-		"film": models.Film{},
-		"none": models.NoPackaging{},
+		"bag":  models.NewBag(),
+		"box":  models.NewBox(),
+		"film": models.NewFilm(),
+		"none": models.NewNoPackaging(),
 	}
 )
 
@@ -31,7 +31,7 @@ func NewRepository(provider transactor.QueryEngineProvider) *Repository {
 func toDomainOrder(order schema.OrderInfo) models.Order {
 	packaging, ok := packagingMap[order.Packaging]
 	if !ok {
-		packaging = models.NoPackaging{}
+		packaging = models.NewNoPackaging()
 	}
 
 	return models.Order{

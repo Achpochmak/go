@@ -55,6 +55,7 @@ func NewCLI(d Deps) *CLI {
 		numWorkers:    2,
 		workerPool:    make(chan struct{}, 2),
 		notifications: make(chan string, 10),
+		taskQueueOpen: true,
 	}
 	go cli.notificationHandler()
 	return cli
@@ -85,19 +86,30 @@ func (c *CLI) Run() error {
 		}
 
 		commandName := args[0]
+
 		if commandName == exit {
-			close(c.taskQueue)
+			c.mu.Lock()
+			if c.taskQueueOpen {
+				c.taskQueueOpen = false
+				close(c.taskQueue)
+			}
+			c.mu.Unlock()
 			go func() {
 				time.Sleep(5 * time.Second)
 				cancel()
 			}()
 			break
 		}
-		c.taskQueue <- task{commandName: commandName, args: args[1:]}
+		if c.taskQueueOpen {
+			c.taskQueue <- task{commandName: commandName, args: args[1:]}
+		} else {
+			fmt.Println("Доступ закрыт")
+		}
+
 	}
 
 	c.wg.Wait()
-	fmt.Println("All tasks completed. Exiting...")
+	fmt.Println("Все задачи завершены.")
 	os.Exit(0)
 	return nil
 }

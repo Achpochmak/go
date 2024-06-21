@@ -1,36 +1,56 @@
 package models
 
-// интерфейс для упаковки заказа
-type Packaging interface {
-	GetName() string
-	GetPrice() float64
-	GetMaxWeight() float64
+// Упаковка
+type Packaging struct {
+	Name      string
+	Price     float64
+	MaxWeight float64
 }
 
-// пакет
-type Bag struct{}
+// Пакет
+func NewBag() Packaging {
+	return Packaging{
+		Name:      "bag",
+		Price:     5,
+		MaxWeight: 10,
+	}
+}
 
-func (b Bag) GetName() string       { return "bag" }
-func (b Bag) GetPrice() float64     { return 5 }
-func (b Bag) GetMaxWeight() float64 { return 10 }
+// Коробка
+func NewBox() Packaging {
+	return Packaging{
+		Name:      "box",
+		Price:     20,
+		MaxWeight: 30,
+	}
+}
 
-// коробка
-type Box struct{}
+// Пленка
+func NewFilm() Packaging {
+	return Packaging{
+		Name:      "film",
+		Price:     1,
+		MaxWeight: -1,
+	}
+}
 
-func (bx Box) GetName() string       { return "box" }
-func (bx Box) GetPrice() float64     { return 20 }
-func (bx Box) GetMaxWeight() float64 { return 30 }
+// нет упаковки
+func NewNoPackaging() Packaging {
+	return Packaging{
+		Name:      "none",
+		Price:     0,
+		MaxWeight: -1,
+	}
+}
 
-// пленка
-type Film struct{}
+func (p Packaging) GetName() string {
+	return p.Name
+}
 
-func (f Film) GetName() string       { return "film" }
-func (f Film) GetPrice() float64     { return 1 }
-func (f Film) GetMaxWeight() float64 { return -1 }
+func (p Packaging) GetPrice() float64 {
+	return p.Price
+}
 
-// без упаковки
-type NoPackaging struct{}
-
-func (np NoPackaging) GetName() string       { return "none" }
-func (np NoPackaging) GetPrice() float64     { return 0 }
-func (np NoPackaging) GetMaxWeight() float64 { return -1 }
+func (p Packaging) GetMaxWeight() float64 {
+	return p.MaxWeight
+}

@@ -16,7 +16,10 @@ func (c *CLI) handleSignals(cancel context.CancelFunc) {
 	go func() {
 		sig := <-sigChan
 		fmt.Printf("Получена команда %s. Exiting...\n", sig)
-		close(c.taskQueue)
+		if c.taskQueueOpen {
+			close(c.taskQueue)
+			c.taskQueueOpen = false
+		}
 		go func() {
 			time.Sleep(5 * time.Second)
 			cancel()

@@ -97,14 +97,14 @@ func validateOrderParams(id, idReceiver int, weight, price float64, storageTime 
 func parsePackaging(packagingType string) (models.Packaging, error) {
 	switch packagingType {
 	case "bag":
-		return models.Bag{}, nil
+		return models.NewBag(), nil
 	case "box":
-		return models.Box{}, nil
+		return models.NewBox(), nil
 	case "film":
-		return models.Film{}, nil
+		return models.NewFilm(), nil
 	case "":
-		return models.NoPackaging{}, nil
+		return models.NewNoPackaging(), nil
 	default:
-		return models.NoPackaging{}, customErrors.ErrInvalidPackaging
+		return models.NewNoPackaging(), customErrors.ErrInvalidPackaging
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	
+
 	"HOMEWORK-1/internal/models/customErrors"
 
 	"github.com/pkg/errors"
@@ -16,7 +16,8 @@ func (c *CLI) setWorkers(args []string) error {
 	if err != nil {
 		return errors.Wrap(err, "некорректный ввод")
 	}
-
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if num > c.numWorkers {
 		for i := c.numWorkers; i < num; i++ {
 			c.wg.Add(1)

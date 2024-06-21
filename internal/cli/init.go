@@ -35,7 +35,6 @@ const (
 	setWorkersDescription          = "вывести список возвратов: использование setWorkers --num=5"
 )
 
-
 type command struct {
 	name        string
 	description string
@@ -64,6 +63,8 @@ type CLI struct {
 	workerPool    chan struct{}
 	numWorkers    int
 	wg            sync.WaitGroup
+	mu            sync.Mutex
+	taskQueueOpen bool
 }
 
 type task struct {
