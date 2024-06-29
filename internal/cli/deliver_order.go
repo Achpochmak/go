@@ -1,19 +1,22 @@
 package cli
 
 import (
-	"HOMEWORK-1/internal/models/customErrors"
 	"context"
 	"flag"
 	"fmt"
 	"strconv"
 	"strings"
+	
+	"HOMEWORK-1/internal/models/customErrors"
+
+	"github.com/pkg/errors"
 )
 
 // Доставить заказ
 func (c *CLI) deliverOrder(ctx context.Context, args []string) error {
 	orderIDs, idReceiver, err := c.parseDeliverOrder(args)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "некорректный ввод")
 	}
 
 	orders, err := c.Module.DeliverOrder(ctx, orderIDs, idReceiver)

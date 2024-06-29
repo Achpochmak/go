@@ -13,13 +13,13 @@ func (r *Repository) GetOrdersByCustomer(ctx context.Context, ID models.ID, amou
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
 	query := sq.Select(orderColumns...).
 		From(orderTable).
-		OrderBy("createdat DESC").
-		Where("idReceiver = $1", ID).PlaceholderFormat(sq.Dollar)
+		OrderBy("created_at DESC").
+		Where("id_receiver = $1", ID).PlaceholderFormat(sq.Dollar)
 
 	if amount > 0 {
 		query = query.Limit(uint64(amount))
 	}
-	
+
 	rawQuery, args, err := query.ToSql()
 	if err != nil {
 		return nil, err

@@ -1,22 +1,19 @@
 package cli
 
 import (
-	"HOMEWORK-1/internal/models"
 	"context"
+
+	"HOMEWORK-1/internal/models"
+
+	"github.com/pkg/errors"
 )
 
 // Удалить заказ
 func (c *CLI) deleteOrder(ctx context.Context, args []string) error {
 	id, err := c.parseID(args)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "некорректный ввод")
 	}
 
-	order, err := c.Module.GetOrderByID(ctx, models.ID(id))
-
-	if err != nil {
-		return err
-	}
-
-	return c.Module.DeleteOrder(ctx, models.Order(order))
+	return c.Module.DeleteOrder(ctx, models.ID(id))
 }

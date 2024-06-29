@@ -17,10 +17,11 @@ func (r *Repository) GetOrderByID(ctx context.Context, ID models.ID) (models.Ord
 		Where(sq.Eq{"id": ID}).
 		PlaceholderFormat(sq.Dollar)
 	rawQuery, args, err := query.ToSql()
-	
+
 	if err != nil {
 		return models.Order{}, err
 	}
+
 	var order schema.OrderInfo
 	if err := pgxscan.Get(ctx, db, &order, rawQuery, args...); err != nil {
 		return models.Order{}, err

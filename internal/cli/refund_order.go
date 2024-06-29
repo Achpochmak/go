@@ -1,16 +1,19 @@
 package cli
 
 import (
-	"HOMEWORK-1/internal/models/customErrors"
 	"context"
 	"flag"
+	
+	"HOMEWORK-1/internal/models/customErrors"
+
+	"github.com/pkg/errors"
 )
 
 // Вернуть заказ
 func (c *CLI) refund(ctx context.Context, args []string) error {
 	id, idReceiver, err := c.parseRefund(args)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "некорректный ввод")
 	}
 
 	err = c.Module.Refund(ctx, id, idReceiver)

@@ -11,14 +11,22 @@ import (
 
 func (r *Repository) ListRefund(ctx context.Context, page int, pageSize int) ([]models.Order, error) {
 	db := r.QueryEngineProvider.GetQueryEngine(ctx)
-	offset := (page - 1) * pageSize
+	var query sq.SelectBuilder
 
-	query := sq.Select(orderColumns...).
-		From(orderTable).
-		Where("refund = true").
-		Limit(uint64(pageSize)).
-		Offset(uint64(offset)).
-		PlaceholderFormat(sq.Dollar)
+	if page == 0 || pageSize == 0 {
+		query = sq.Select(orderColumns...).
+			From(orderTable).
+			Where("refund = true").
+			PlaceholderFormat(sq.Dollar)
+	} else {
+		offset := (page - 1) * pageSize
+		query = sq.Select(orderColumns...).
+			From(orderTable).
+			Where("refund = true").
+			Limit(uint64(pageSize)).
+			Offset(uint64(offset)).
+			PlaceholderFormat(sq.Dollar)
+	}
 
 	rawQuery, args, err := query.ToSql()
 	if err != nil {
