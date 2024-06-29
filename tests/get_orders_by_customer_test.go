@@ -19,7 +19,6 @@ import (
 )
 
 func TestGetOrderByCustomerIntegration(t *testing.T) {
-
 	initConfig()
 	pool := connectDB()
 	defer pool.Close()
@@ -33,9 +32,8 @@ func TestGetOrderByCustomerIntegration(t *testing.T) {
 
 	ctx := context.Background()
 
-	c := cli.NewCLI(cli.Deps{Module: pvz}, nil)
-	handler := cli.NewCLIHandler(c)
-	c.SetHandler(handler)
+	c := cli.NewCLI(cli.Deps{Module: pvz})
+
 
 	args := []string{
 		"--idReceiver=5",
@@ -77,6 +75,7 @@ func TestGetOrderByCustomerIntegration(t *testing.T) {
 	for _, order := range orders {
 		repo.AddOrder(ctx, order)
 	}
+	
 	//Перехватываем вывод в консоль, чтобы не было лишнего вывода
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -89,7 +88,7 @@ func TestGetOrderByCustomerIntegration(t *testing.T) {
 		outputCh <- buf.String()
 	}()
 
-	err := handler.GetOrdersByCustomer(ctx, args)
+	err := c.GetOrdersByCustomer(ctx, args)
 	assert.NoError(t, err, "GetOrderByCustomer should not return an error")
 
 	w.Close()

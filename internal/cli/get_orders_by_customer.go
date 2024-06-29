@@ -10,7 +10,7 @@ import (
 )
 
 // Получить список заказов по получателю
-func (c *CLI) getOrdersByCustomer(ctx context.Context, args []string) error {
+func (c *CLI) GetOrdersByCustomer(ctx context.Context, args []string) error {
 	idReceiver, amount, err := c.parseGetOrdersByCustomer(args)
 	if err != nil {
 		return errors.Wrap(err, "некорректный ввод")

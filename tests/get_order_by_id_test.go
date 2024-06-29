@@ -19,7 +19,6 @@ import (
 )
 
 func TestGetOrderByIDIntegration(t *testing.T) {
-
 	initConfig()
 	pool := connectDB()
 	defer pool.Close()
@@ -33,9 +32,7 @@ func TestGetOrderByIDIntegration(t *testing.T) {
 
 	ctx := context.Background()
 
-	c := cli.NewCLI(cli.Deps{Module: pvz}, nil)
-	handler := cli.NewCLIHandler(c)
-	c.SetHandler(handler)
+	c := cli.NewCLI(cli.Deps{Module: pvz})
 
 	args := []string{
 		"--id=100",
@@ -77,7 +74,7 @@ func TestGetOrderByIDIntegration(t *testing.T) {
 		outputCh <- buf.String()
 	}()
 
-	err := handler.GetOrderByID(ctx, args)
+	err := c.GetOrderByID(ctx, args)
 	assert.NoError(t, err, "GetOrderByID should not return an error")
 	w.Close()
 	os.Stdout = oldStdout

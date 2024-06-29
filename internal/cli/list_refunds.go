@@ -9,7 +9,7 @@ import (
 )
 
 // Список возвратов
-func (c *CLI) listRefund(ctx context.Context, args []string) error {
+func (c *CLI) ListRefund(ctx context.Context, args []string) error {
 	page, pageSize, err := c.parseListRefund(args)
 	if err != nil {
 		return errors.Wrap(err, "некорректный ввод")

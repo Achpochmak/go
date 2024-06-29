@@ -28,12 +28,11 @@ func TestAddOrderIntegration(t *testing.T) {
 
 	ctx := context.Background()
 
-	c := cli.NewCLI(cli.Deps{Module: pvz}, nil)
-	handler := cli.NewCLIHandler(c)
-	c.SetHandler(handler)
+	c := cli.NewCLI(cli.Deps{Module: pvz})
+
 
 	args := []string{
-		"--id=99",
+		"--id=110",
 		"--idReceiver=1",
 		"--storageTime=2025-06-15T15:04:05Z",
 		"--weightKg=1",
@@ -41,7 +40,7 @@ func TestAddOrderIntegration(t *testing.T) {
 	}
 
 	expectedOrder := models.Order{
-		ID:          99,
+		ID:          110,
 		IDReceiver:  1,
 		StorageTime: time.Date(2025, 6, 15, 15, 4, 5, 0, time.UTC),
 		WeightKg:    1.0,
@@ -50,7 +49,7 @@ func TestAddOrderIntegration(t *testing.T) {
 		CreatedAt:   time.Now(),
 	}
 
-	err := handler.AddOrder(ctx, args)
+	err := c.AddOrder(ctx, args)
 	assert.NoError(t, err, "AddOrder should not return an error")
 
 	order, err := repo.GetOrderByID(ctx, expectedOrder.ID)
@@ -64,5 +63,4 @@ func TestAddOrderIntegration(t *testing.T) {
 
 	err = repo.DeleteOrder(ctx, expectedOrder.ID)
 	assert.NoError(t, err, "DeleteOrder should not return an error")
-
 }

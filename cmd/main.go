@@ -56,9 +56,7 @@ func main() {
 		Transactor: tm,
 	})
 
-	commands := cli.NewCLI(cli.Deps{Module: pvz}, nil)
-	handler := cli.NewCLIHandler(commands) 
-	commands.SetHandler(handler) 
+	commands := cli.NewCLI(cli.Deps{Module: pvz})
 
 	for {
 		if err := commands.Run(); err != nil {

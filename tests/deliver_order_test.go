@@ -31,10 +31,8 @@ func TestDeliverOrderIntegration(t *testing.T) {
 	})
 
 	ctx := context.Background()
+	c := cli.NewCLI(cli.Deps{Module: pvz})
 
-	c := cli.NewCLI(cli.Deps{Module: pvz}, nil)
-	handler := cli.NewCLIHandler(c)
-	c.SetHandler(handler)
 
 	args := []string{
 		"--id=103,104",
@@ -77,7 +75,7 @@ func TestDeliverOrderIntegration(t *testing.T) {
 		outputCh <- buf.String()
 	}()
 
-	err := handler.DeliverOrder(ctx, args)
+	err := c.DeliverOrder(ctx, args)
 	assert.NoError(t, err, "DeliverOrder should not return an error")
 	w.Close()
 	os.Stdout = oldStdout

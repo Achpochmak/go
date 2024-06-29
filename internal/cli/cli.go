@@ -11,10 +11,9 @@ import (
 )
 
 // NewCLI creates a command line interface
-func NewCLI(d Deps, handler CLIHandler) *CLI {
+func NewCLI(d Deps) *CLI {
 	cli := &CLI{
 		Deps:    d,
-		handler: handler,
 		commandList: []command{
 			{
 				name:        help,

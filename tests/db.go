@@ -10,7 +10,7 @@ import (
 )
 
 func initConfig() {
-	viper.SetConfigName("config")
+	viper.SetConfigName("test")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	if err := viper.ReadInConfig(); err != nil {

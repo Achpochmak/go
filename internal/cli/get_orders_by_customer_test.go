@@ -1,13 +1,11 @@
-package cli_tests
+package cli
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"HOMEWORK-1/internal/cli"
 	mock_cli "HOMEWORK-1/internal/cli/mocks"
-	"HOMEWORK-1/internal/models"
 	"HOMEWORK-1/internal/models/customErrors"
 
 	"github.com/golang/mock/gomock"
@@ -15,40 +13,43 @@ import (
 )
 
 var (
-	testCasesGetByIDOrder = []testCase{
+	testCasesGetOrdersByCustomer = []testCase{
+
 		{
 			name:        "Valid input",
-			args:        []string{"--id=1"},
+			args:        []string{"--n=0", "--idReceiver=1"},
 			expectedErr: nil,
 		},
 		{
-			name:        "Missing ID",
-			args:        []string{""},
-			expectedErr: customErrors.ErrIDNotFound,
+			name:        "Valid input",
+			args:        []string{"--idReceiver=1"},
+			expectedErr: nil,
 		},
+		{
+			name:        "Missing ID receiver",
+			args:        []string{""},
+			expectedErr: customErrors.ErrReceiverNotFound,
+		},
+
 	}
 )
 
-func TestGetByIDOrder(t *testing.T) {
+func TestGetOrdersByCustomer(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
 	module := mock_cli.NewMockModule(ctrl)
-	commands := cli.NewCLI(cli.Deps{Module: module}, nil)
-	handler := cli.NewCLIHandler(commands)
-	commands.SetHandler(handler)
+	commands := NewCLI(Deps{Module: module})
 	ctx := context.Background()
 
-	for _, tc := range testCasesGetByIDOrder {
+	for _, tc := range testCasesGetOrdersByCustomer {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.name == "Valid input" {
-				expectedOrder := models.Order{
-					ID: 2,
-				}
-				module.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(expectedOrder, nil)
+				module.EXPECT().GetOrdersByCustomer(gomock.Any(), 1, 0).Return(nil,nil)
 			}
 
-			err := handler.GetOrderByID(ctx, tc.args)
+			err := commands.GetOrdersByCustomer(ctx, tc.args)
 
 			if tc.expectedErr == nil {
 				assert.NoError(t, err)

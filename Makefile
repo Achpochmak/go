@@ -1,3 +1,10 @@
+INTERNAL_REPO_PATH=$(CURDIR)/
+MIGRATION_FOLDER=$(INTERNAL_REPO_PATH)/migrations
+
+
+POSTGRES_OMS_SETUP := user=postgres password=password dbname=oms host=localhost port=5432 sslmode=disable
+POSTGRES_TEST_SETUP := user=postgres password=password dbname=test host=localhost port=5432 sslmode=disable
+
 # build docker image
 build:
 	docker compose build
@@ -21,7 +28,6 @@ start-db:
 down-db:
 	docker compose down postgres
 
-
 up-service:
 	docker compose up -d app
 
@@ -34,16 +40,44 @@ start-service:
 down-service:
 	docker compose down app
 
-#запуск тестового окружения при помощи docker-compose, 
-up-test:
-	docker compose up test
-down-test:
-	docker compose down test
+# запуск тестового окружения при помощи docker-compose
+.PHONY: test-base-up
+test-base-up:
+	docker compose -f docker-compose.test.yml up -d
+
+.PHONY: test-base-down
+test-base-down:
+	docker compose -f docker-compose.test.yml down
+
 test:
 	go test ./... 
-#запуск интеграционных тестов, 
-integration-tests: up-test
-	docker compose exec test go test ./tests/integration_tests -v
-#запуск Unit-тестов, 
-#запуск скрипта миграций, 
-#очищение базы от тестовых данных
+
+# запуск интеграционных тестов
+integration-tests: 
+	go test ./tests -v
+
+# запуск Unit-тестов
+unit-tests:
+	go test ./internal/cli
+	go test ./internal/module
+
+# запуск скрипта миграций
+.PHONY: migration-up-oms
+migration-up-oms:
+	goose -dir "$(MIGRATION_FOLDER)" postgres "$(POSTGRES_OMS_SETUP)" up
+
+.PHONY: migration-down-oms
+migration-down-oms:
+	goose -dir "$(MIGRATION_FOLDER)" postgres "$(POSTGRES_OMS_SETUP)" down
+
+.PHONY: migration-up-test
+migration-up-test:
+	goose -dir "$(MIGRATION_FOLDER)" postgres "$(POSTGRES_TEST_SETUP)" up
+
+.PHONY: migration-down-test
+migration-down-test:
+	goose -dir "$(MIGRATION_FOLDER)" postgres "$(POSTGRES_TEST_SETUP)" down
+
+.PHONY: cleanup-db-test
+cleanup-db-test:
+	psql "postgres://postgres:password@localhost:5432/test?sslmode=disable" -f ./cleanup_test.sql

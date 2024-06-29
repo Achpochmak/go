@@ -28,10 +28,7 @@ func TestDeleteOrderIntegration(t *testing.T) {
 	})
 
 	ctx := context.Background()
-
-	c := cli.NewCLI(cli.Deps{Module: pvz}, nil)
-	handler := cli.NewCLIHandler(c)
-	c.SetHandler(handler)
+	c := cli.NewCLI(cli.Deps{Module: pvz})
 
 	args := []string{
 		"--id=102",
@@ -48,7 +45,7 @@ func TestDeleteOrderIntegration(t *testing.T) {
 	}
 	repo.AddOrder(ctx, testOrder)
 
-	err := handler.DeleteOrder(ctx, args)
+	err := c.DeleteOrder(ctx, args)
 	assert.NoError(t, err, "DeleteOrder should not return an error")
 
 	order, err := repo.GetOrderByID(ctx, testOrder.ID)

@@ -67,7 +67,6 @@ type CLI struct {
 	wg            sync.WaitGroup
 	mu            sync.Mutex
 	taskQueueOpen bool
-	handler       CLIHandler
 }
 
 type task struct {

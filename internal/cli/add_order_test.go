@@ -1,4 +1,6 @@
-package cli_tests
+//build unit
+
+package cli
 
 import (
 	"context"
@@ -6,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"HOMEWORK-1/internal/cli"
 	mock_cli "HOMEWORK-1/internal/cli/mocks"
 	"HOMEWORK-1/internal/models"
 	"HOMEWORK-1/internal/models/customErrors"
@@ -66,9 +67,7 @@ func TestAddOrderCLI(t *testing.T) {
 	defer ctrl.Finish()
 
 	module := mock_cli.NewMockModule(ctrl)
-	commands := cli.NewCLI(cli.Deps{Module: module}, nil)
-	handler := cli.NewCLIHandler(commands)
-	commands.SetHandler(handler)
+	commands := NewCLI(Deps{Module: module})
 	ctx := context.Background()
 
 	for _, tc := range testCasesAddOrder {
@@ -98,7 +97,7 @@ func TestAddOrderCLI(t *testing.T) {
 					})
 			}
 
-			err := handler.AddOrder(ctx, tc.args)
+			err := commands.AddOrder(ctx, tc.args)
 
 			if tc.expectedErr == nil {
 				assert.NoError(t, err)

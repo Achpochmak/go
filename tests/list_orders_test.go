@@ -19,7 +19,6 @@ import (
 )
 
 func TestListOrderIntegration(t *testing.T) {
-
 	initConfig()
 	pool := connectDB()
 	defer pool.Close()
@@ -55,9 +54,7 @@ func TestListOrderIntegration(t *testing.T) {
 		assert.NoError(t, err, "AddOrder should not return an error")
 	}
 
-	c := cli.NewCLI(cli.Deps{Module: mod}, nil)
-	handler := cli.NewCLIHandler(c)
-	c.SetHandler(handler)
+	c := cli.NewCLI(cli.Deps{Module: mod})
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -70,7 +67,7 @@ func TestListOrderIntegration(t *testing.T) {
 		outputCh <- buf.String()
 	}()
 
-	err := handler.ListOrder(ctx)
+	err := c.ListOrder(ctx)
 	assert.NoError(t, err, "ListOrder should not return an error")
 
 	w.Close()

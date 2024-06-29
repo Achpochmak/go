@@ -21,7 +21,7 @@ type OrderParams struct {
 }
 
 // Добавить заказ
-func (c *CLI) addOrder(ctx context.Context, args []string) error {
+func (c *CLI) AddOrder(ctx context.Context, args []string) error {
 	params, err := c.parseAddOrder(args)
 	if err != nil {
 		return errors.Wrap(err, "некорректный ввод")

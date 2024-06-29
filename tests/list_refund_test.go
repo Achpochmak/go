@@ -19,7 +19,6 @@ import (
 )
 
 func TestListRefundIntegration(t *testing.T) {
-
 	initConfig()
 	pool := connectDB()
 	defer pool.Close()
@@ -57,9 +56,7 @@ func TestListRefundIntegration(t *testing.T) {
 		assert.NoError(t, err, "AddOrder should not return an error")
 	}
 
-	c := cli.NewCLI(cli.Deps{Module: mod}, nil)
-	handler := cli.NewCLIHandler(c)
-	c.SetHandler(handler)
+	c := cli.NewCLI(cli.Deps{Module: mod})
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -72,7 +69,7 @@ func TestListRefundIntegration(t *testing.T) {
 		outputCh <- buf.String()
 	}()
 
-	err := handler.ListRefund(ctx, []string{""})
+	err := c.ListRefund(ctx, []string{""})
 	assert.NoError(t, err, "ListRefund should not return an error")
 
 	w.Close()

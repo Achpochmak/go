@@ -1,4 +1,4 @@
-package cli_tests
+package cli
 
 type testCase struct {
 	name        string

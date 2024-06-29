@@ -10,7 +10,7 @@ import (
 )
 
 // Вернуть заказ
-func (c *CLI) refund(ctx context.Context, args []string) error {
+func (c *CLI) Refund(ctx context.Context, args []string) error {
 	id, idReceiver, err := c.parseRefund(args)
 	if err != nil {
 		return errors.Wrap(err, "некорректный ввод")

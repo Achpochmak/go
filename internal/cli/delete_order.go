@@ -9,7 +9,7 @@ import (
 )
 
 // Удалить заказ
-func (c *CLI) deleteOrder(ctx context.Context, args []string) error {
+func (c *CLI) DeleteOrder(ctx context.Context, args []string) error {
 	id, err := c.parseID(args)
 	if err != nil {
 		return errors.Wrap(err, "некорректный ввод")

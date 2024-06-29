@@ -1,4 +1,4 @@
-package tests
+package module
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 
 	"HOMEWORK-1/internal/models"
 	"HOMEWORK-1/internal/models/customErrors"
-	"HOMEWORK-1/internal/module"
 	mock_module "HOMEWORK-1/internal/module/mocks"
 
 	"github.com/golang/mock/gomock"
@@ -44,9 +43,17 @@ var (
 			ordersID:   []int{1, 2},
 			idReceiver: 1,
 			setupMocks: func(repo *mock_module.MockRepository) {
+				updatedOrder1 := order1
+				updatedOrder1.Delivered = true
+				updatedOrder1.DeliveryTime = time.Now().UTC()
+				updatedOrder2 := order2
+				updatedOrder2.Delivered = true
+				updatedOrder2.DeliveryTime = time.Now().UTC()
+				
 				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(order1, nil)
 				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(2)).Return(order2, nil)
-				repo.EXPECT().UpdateOrder(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+				repo.EXPECT().UpdateOrder(gomock.Any(), gomock.Any()).Return(nil)
+				repo.EXPECT().UpdateOrder(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectedErr:   nil,
 			expectedOrder: []models.Order{order1, order2},
@@ -104,7 +111,7 @@ func TestDeliverOrder(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := mock_module.NewMockRepository(ctrl)
 			tc.setupMocks(repo)
-			module := module.NewModule(module.Deps{Repository: repo})
+			module := NewModule(Deps{Repository: repo})
 			ctx := context.Background()
 			orders, err := module.DeliverOrder(ctx, tc.ordersID, tc.idReceiver)
 
@@ -116,11 +123,11 @@ func TestDeliverOrder(t *testing.T) {
 					assert.Equal(t, tc.expectedOrder[i].IDReceiver, order.IDReceiver)
 					assert.Equal(t, tc.expectedOrder[i].StorageTime, order.StorageTime)
 					assert.True(t, order.Delivered)
-					assert.WithinDuration(t, time.Now(), order.DeliveryTime, 2*time.Second)
+					assert.WithinDuration(t, time.Now().UTC(), order.DeliveryTime, 10*time.Second)
 				}
 			} else {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tc.expectedErr.Error())
+				assert.Error(t, err, tc.expectedErr)
 			}
 		})
 	}

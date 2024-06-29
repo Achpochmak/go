@@ -13,7 +13,7 @@ import (
 )
 
 // Доставить заказ
-func (c *CLI) deliverOrder(ctx context.Context, args []string) error {
+func (c *CLI) DeliverOrder(ctx context.Context, args []string) error {
 	orderIDs, idReceiver, err := c.parseDeliverOrder(args)
 	if err != nil {
 		return errors.Wrap(err, "некорректный ввод")

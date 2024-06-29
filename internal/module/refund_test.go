@@ -1,4 +1,4 @@
-package tests
+package module
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 
 	"HOMEWORK-1/internal/models"
 	"HOMEWORK-1/internal/models/customErrors"
-	"HOMEWORK-1/internal/module"
 	mock_module "HOMEWORK-1/internal/module/mocks"
 
 	"github.com/golang/mock/gomock"
@@ -96,7 +95,7 @@ func TestRefundOrder(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := mock_module.NewMockRepository(ctrl)
 			tc.setupMocks(repo)
-			module := module.NewModule(module.Deps{Repository: repo})
+			module := NewModule(Deps{Repository: repo})
 			ctx := context.Background()
 			err := module.Refund(ctx, tc.orderID, tc.idReceiver)
 

@@ -10,7 +10,7 @@ import (
 )
 
 // Найти заказ
-func (c *CLI) getOrderByID(ctx context.Context, args []string) error {
+func (c *CLI) GetOrderByID(ctx context.Context, args []string) error {
 	id, err := c.parseID(args)
 	if err != nil {
 		return errors.Wrap(err, "некорректный ввод")

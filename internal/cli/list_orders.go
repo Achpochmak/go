@@ -6,7 +6,7 @@ import (
 )
 
 // Список заказов
-func (c *CLI) listOrder(ctx context.Context) error {
+func (c *CLI) ListOrder(ctx context.Context) error {
 	list, err := c.Module.ListOrder(ctx)
 	if err != nil {
 		return err

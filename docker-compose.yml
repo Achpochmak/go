@@ -23,11 +23,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 4G
     networks:
       - net
 
@@ -55,24 +50,4 @@ services:
     networks:
       - net
 
-  test:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: 'test-container'
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: oms
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      PGDATA: "/var/lib/postgresql/data/pgdata"
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/oms
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - .:/var/lib/postgresql/data
-      - ./config.yaml:/config.yaml
-    networks:
-      - net
-    command: ["sh", "-c", "sleep 20 && go test ./tests/integration_tests -v && while :; do sleep 1; done"] # Command to run tests
+ 

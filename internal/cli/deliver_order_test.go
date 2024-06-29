@@ -1,12 +1,14 @@
-package cli_tests
+//+ build unit
+
+package cli
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"HOMEWORK-1/internal/cli"
 	mock_cli "HOMEWORK-1/internal/cli/mocks"
+	"HOMEWORK-1/internal/models"
 	"HOMEWORK-1/internal/models/customErrors"
 
 	"github.com/golang/mock/gomock"
@@ -14,14 +16,10 @@ import (
 )
 
 var (
-	testCasesRefundOrder = []struct {
-		name        string
-		args        []string
-		expectedErr error
-	}{
+	testCasesDeliverOrder = []testCase{
 		{
 			name:        "Valid input",
-			args:        []string{"--id=1", "--idReceiver=1"},
+			args:        []string{"--id=1,2", "--idReceiver=1"},
 			expectedErr: nil,
 		},
 		{
@@ -37,24 +35,33 @@ var (
 	}
 )
 
-func TestRefundOrder(t *testing.T) {
+func TestDeliverOrder(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	module := mock_cli.NewMockModule(ctrl)
-	commands := cli.NewCLI(cli.Deps{Module: module}, nil)
-	handler := cli.NewCLIHandler(commands)
-	commands.SetHandler(handler)
+	commands := NewCLI(Deps{Module: module})
 	ctx := context.Background()
 
-	for _, tc := range testCasesRefundOrder {
+	for _, tc := range testCasesDeliverOrder {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.name == "Valid input" {
-				module.EXPECT().Refund(gomock.Any(), 1, 1).Return(nil)
+				expectedOrders := []*models.Order{
+					{
+						ID:         1,
+						IDReceiver: 1,
+					},
+					{
+						ID:         2,
+						IDReceiver: 1,
+					},
+				}
+
+				module.EXPECT().DeliverOrder(gomock.Any(), []int{1, 2}, 1).Return(expectedOrders, nil)
 			}
 
-			err := handler.Refund(ctx, tc.args)
+			err := commands.DeliverOrder(ctx, tc.args)
 
 			if tc.expectedErr == nil {
 				assert.NoError(t, err)

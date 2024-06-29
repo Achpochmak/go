@@ -19,21 +19,21 @@ func (c *CLI) worker(ctx context.Context) {
 			case help:
 				c.help()
 			case addOrder:
-				err = c.addOrder(ctx, t.args)
+				err = c.AddOrder(ctx, t.args)
 			case deleteOrder:
-				err = c.deleteOrder(ctx, t.args)
+				err = c.DeleteOrder(ctx, t.args)
 			case deliverOrder:
-				err = c.deliverOrder(ctx, t.args)
+				err = c.DeliverOrder(ctx, t.args)
 			case listOrder:
-				err = c.listOrder(ctx)
+				err = c.ListOrder(ctx)
 			case GetOrderByID:
-				err = c.getOrderByID(ctx, t.args)
+				err = c.GetOrderByID(ctx, t.args)
 			case getOrdersByCustomer:
-				err = c.getOrdersByCustomer(ctx, t.args)
+				err = c.GetOrdersByCustomer(ctx, t.args)
 			case refund:
-				err = c.refund(ctx, t.args)
+				err = c.Refund(ctx, t.args)
 			case listRefund:
-				err = c.listRefund(ctx, t.args)
+				err = c.ListRefund(ctx, t.args)
 			case setWorkers:
 				err = c.setWorkers(t.args)
 			case exit:
