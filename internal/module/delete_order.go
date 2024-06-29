@@ -2,9 +2,7 @@ package module
 
 import (
 	"HOMEWORK-1/internal/models"
-	"HOMEWORK-1/internal/models/customErrors"
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 )
@@ -22,15 +20,10 @@ func (m Module) DeleteOrder(ctx context.Context, id models.ID) error {
 
 // Проверка параметров удаления заказа
 func (m Module) validateDeleteOrder(ctx context.Context, id models.ID) error {
-	order, err := m.Repository.GetOrderByID(ctx, id)
+	_, err := m.Repository.GetOrderByID(ctx, id)
 	if err != nil {
 		return err
 	}
-	if time.Now().Before(order.StorageTime) {
-		return customErrors.ErrStorageTimeNotEnded
-	}
-	if order.Delivered {
-		return customErrors.ErrDelivered
-	}
+
 	return nil
 }

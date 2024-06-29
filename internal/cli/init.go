@@ -1,3 +1,5 @@
+//go:generate mockgen -source ./init.go -destination=./mocks/cli.go -package=mock_cli
+
 package cli
 
 import (
@@ -23,7 +25,7 @@ const (
 
 const (
 	helpDescription                = "справка"
-	addOrderDescription            = "добавить заказ: использование add --id=1 --idReceiver=1 --storageTime=2025-06-15T15:04:05Z --weightKg=1 --price=100(опционально --packaging=box|film|bag)"
+	addOrderDescription            = "добавить заказ: использование add --id=54 --idReceiver=1 --storageTime=2025-06-15T15:04:05Z --weightKg=1 --price=100(опционально --packaging=box|film|bag)"
 	deleteOrderDescription         = "удалить заказ: использование delete --id=1"
 	deliverOrderDescription        = "доставить заказ: использование deliver --id=1,2 --idReceiver=1"
 	listOrderDescription           = "вывести список заказов: использование list"
@@ -44,7 +46,7 @@ type Module interface {
 	AddOrder(context.Context, models.Order) error
 	ListOrder(context.Context) ([]models.Order, error)
 	DeleteOrder(context.Context, models.ID) error
-	DeliverOrder(context.Context, []int, int) ([]models.Order, error)
+	DeliverOrder(context.Context, []int, int) ([]*models.Order, error)
 	GetOrderByID(context.Context, models.ID) (models.Order, error)
 	GetOrdersByCustomer(context.Context, int, int) ([]models.Order, error)
 	Refund(context.Context, int, int) error
@@ -65,6 +67,7 @@ type CLI struct {
 	wg            sync.WaitGroup
 	mu            sync.Mutex
 	taskQueueOpen bool
+	handler       CLIHandler
 }
 
 type task struct {

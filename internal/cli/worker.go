@@ -27,7 +27,7 @@ func (c *CLI) worker(ctx context.Context) {
 			case listOrder:
 				err = c.listOrder(ctx)
 			case GetOrderByID:
-				err = c.GetOrderByID(ctx, t.args)
+				err = c.getOrderByID(ctx, t.args)
 			case getOrdersByCustomer:
 				err = c.getOrdersByCustomer(ctx, t.args)
 			case refund:

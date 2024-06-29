@@ -17,7 +17,7 @@ func (m Module) AddOrder(ctx context.Context, Order models.Order) error {
 	if err != nil {
 		return errors.Wrap(err, "некорректные данные")
 	}
-	
+
 	Order.Price, err = m.packOrder(Order.WeightKg, Order.Price, Order.Packaging)
 	if err != nil {
 		return errors.Wrap(err, "не получилось упаковать заказ")

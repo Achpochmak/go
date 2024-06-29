@@ -1,3 +1,5 @@
+//go:generate mockgen -source ./init_module.go -destination=./mocks/module.go -package=mock_module
+
 package module
 
 import (
@@ -14,7 +16,7 @@ type Repository interface {
 	AddOrder(context.Context, models.Order) error
 	ListOrder(context.Context) ([]models.Order, error)
 	GetOrderByID(context.Context, models.ID) (models.Order, error)
-	UpdateOrder(context.Context, models.Order) error
+	UpdateOrder(context.Context, *models.Order) error
 	DeleteOrder(context.Context, models.ID) error
 	ListRefund(context.Context, int, int) ([]models.Order, error)
 	GetOrdersByCustomer(context.Context, models.ID, int) ([]models.Order, error)

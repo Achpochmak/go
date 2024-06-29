@@ -3,7 +3,7 @@ package module
 import (
 	"context"
 	"time"
-	
+
 	"HOMEWORK-1/internal/models"
 	"HOMEWORK-1/internal/models/customErrors"
 
@@ -20,7 +20,7 @@ func (m Module) Refund(ctx context.Context, id int, idReceiver int) error {
 	order.Delivered = false
 	order.Refund = true
 
-	if err := m.Repository.UpdateOrder(ctx, order); err != nil {
+	if err := m.Repository.UpdateOrder(ctx, &order); err != nil {
 		return errors.Wrap(err, "не удалось обновить заказ")
 	}
 

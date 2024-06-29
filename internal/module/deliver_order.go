@@ -11,7 +11,7 @@ import (
 )
 
 // Доставка заказа
-func (m Module) DeliverOrder(ctx context.Context, ordersID []int, idReceiver int) ([]models.Order, error) {
+func (m Module) DeliverOrder(ctx context.Context, ordersID []int, idReceiver int) ([]*models.Order, error) {
 	set, err := m.validateDeliverOrder(ctx, ordersID, idReceiver)
 
 	if err != nil {
@@ -19,7 +19,7 @@ func (m Module) DeliverOrder(ctx context.Context, ordersID []int, idReceiver int
 	}
 	for _, order := range set {
 		order.Delivered = true
-		order.DeliveryTime = time.Now()
+		order.DeliveryTime = time.Now().UTC()
 		if err := m.Repository.UpdateOrder(ctx, order); err != nil {
 			return nil, errors.Wrap(err, "не получилось обновить заказ")
 		}
@@ -28,8 +28,8 @@ func (m Module) DeliverOrder(ctx context.Context, ordersID []int, idReceiver int
 }
 
 // Проверка параметров доставки
-func (m Module) validateDeliverOrder(ctx context.Context, ordersID []int, idReceiver int) ([]models.Order, error) {
-	set := []models.Order{}
+func (m Module) validateDeliverOrder(ctx context.Context, ordersID []int, idReceiver int) ([]*models.Order, error) {
+	set := []*models.Order{}
 	for _, id := range ordersID {
 		order, err := m.Repository.GetOrderByID(ctx, models.ID(id))
 		if err != nil {
@@ -48,7 +48,7 @@ func (m Module) validateDeliverOrder(ctx context.Context, ordersID []int, idRece
 			return nil, customErrors.ErrWrongReceiver
 		}
 
-		set = append(set, order)
+		set = append(set, &order)
 	}
 	return set, nil
 }

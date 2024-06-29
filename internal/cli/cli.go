@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
 // NewCLI creates a command line interface
-func NewCLI(d Deps) *CLI {
+func NewCLI(d Deps, handler CLIHandler) *CLI {
 	cli := &CLI{
-		Deps: d,
+		Deps:    d,
+		handler: handler,
 		commandList: []command{
 			{
 				name:        help,
@@ -56,13 +58,16 @@ func NewCLI(d Deps) *CLI {
 		workerPool:    make(chan struct{}, 2),
 		notifications: make(chan string, 10),
 		taskQueueOpen: true,
+		wg:            sync.WaitGroup{},
 	}
-	go cli.notificationHandler()
+	
 	return cli
 }
 
 // Run ..
 func (c *CLI) Run() error {
+	go c.notificationHandler()
+	defer close(c.notifications)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	for i := 0; i < c.numWorkers; i++ {
@@ -94,6 +99,7 @@ func (c *CLI) Run() error {
 				close(c.taskQueue)
 			}
 			c.mu.Unlock()
+
 			go func() {
 				time.Sleep(5 * time.Second)
 				cancel()
