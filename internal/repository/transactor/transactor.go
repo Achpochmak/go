@@ -3,12 +3,14 @@ package transactor
 import (
 	"context"
 
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type QueryEngine interface {
 	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
+	Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
 }
 
 type QueryEngineProvider interface {
@@ -21,11 +23,12 @@ type TransactionManager struct {
 
 const key = "tx"
 
-func (tm *TransactionManager) RunRepeatebleRead(ctx context.Context, fx func(ctxTX context.Context) error) error {
+func (tm *TransactionManager) RunRepeatableRead(ctx context.Context, fx func(ctxTX context.Context) error) error {
 	tx, err := tm.Pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,
 		AccessMode: pgx.ReadWrite,
 	})
+
 	if err != nil {
 		return err
 	}

@@ -34,4 +34,16 @@ start-service:
 down-service:
 	docker compose down app
 
-
+#запуск тестового окружения при помощи docker-compose, 
+up-test:
+	docker compose up test
+down-test:
+	docker compose down test
+test:
+	go test ./... 
+#запуск интеграционных тестов, 
+integration-tests: up-test
+	docker compose exec test go test ./tests/integration_tests -v
+#запуск Unit-тестов, 
+#запуск скрипта миграций, 
+#очищение базы от тестовых данных
