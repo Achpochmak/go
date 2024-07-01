@@ -1,3 +1,5 @@
+// +build unit
+
 package cli
 
 import (
@@ -14,7 +16,6 @@ import (
 
 var (
 	testCasesGetOrdersByCustomer = []testCase{
-
 		{
 			name:        "Valid input",
 			args:        []string{"--n=0", "--idReceiver=1"},

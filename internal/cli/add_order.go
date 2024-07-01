@@ -33,7 +33,7 @@ func (c *CLI) AddOrder(ctx context.Context, args []string) error {
 		StorageTime: params.StorageTime,
 		Delivered:   false,
 		Refund:      false,
-		CreatedAt:   time.Now(),
+		CreatedAt:   time.Now().UTC(),
 		WeightKg:    params.Weight,
 		Price:       params.Price,
 		Packaging:   params.Packaging,

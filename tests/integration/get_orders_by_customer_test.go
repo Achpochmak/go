@@ -1,11 +1,11 @@
+//go:build integration
+// +build integration
+
 package integration_tests
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"testing"
 	"time"
 
@@ -14,13 +14,14 @@ import (
 	"HOMEWORK-1/internal/module"
 	"HOMEWORK-1/internal/repository"
 	"HOMEWORK-1/internal/repository/transactor"
+	"HOMEWORK-1/tests"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetOrderByCustomerIntegration(t *testing.T) {
-	initConfig()
-	pool := connectDB()
+	tests.InitConfig()
+	pool := tests.ConnectDB()
 	defer pool.Close()
 
 	tm := &transactor.TransactionManager{Pool: pool}
@@ -33,7 +34,6 @@ func TestGetOrderByCustomerIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	c := cli.NewCLI(cli.Deps{Module: pvz})
-
 
 	args := []string{
 		"--idReceiver=5",
@@ -75,25 +75,14 @@ func TestGetOrderByCustomerIntegration(t *testing.T) {
 	for _, order := range orders {
 		repo.AddOrder(ctx, order)
 	}
-	
-	//Перехватываем вывод в консоль, чтобы не было лишнего вывода
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
 
-	outputCh := make(chan string)
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		outputCh <- buf.String()
-	}()
+	//Перехватываем вывод в консоль, чтобы не было лишнего вывода
+	w, ro := tests.RedirectStdoutToChannel()
 
 	err := c.GetOrdersByCustomer(ctx, args)
 	assert.NoError(t, err, "GetOrderByCustomer should not return an error")
 
-	w.Close()
-	os.Stdout = oldStdout
-	output := <-outputCh
+	output := ro.RedirectChannelToStdout(w)
 
 	var expectedOutput string
 	for _, order := range expectedOrders {

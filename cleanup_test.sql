@@ -1,2 +1,2 @@
-DELETE FROM orders;
+TRUNCATE TABLE orders;
 

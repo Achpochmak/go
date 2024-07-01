@@ -1,4 +1,5 @@
-package integration_tests
+
+package tests
 
 import (
 	"context"
@@ -9,16 +10,18 @@ import (
 	"github.com/spf13/viper"
 )
 
-func initConfig() {
+func InitConfig() {
 	viper.SetConfigName("test")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
+	viper.AddConfigPath("$HOME/OZON/homework-1/tests") 
+	
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalf("ошибка файла конфигурации: %v", err)
 	}
 }
 
-func connectDB() *pgxpool.Pool {
+func ConnectDB() *pgxpool.Pool {
 	dbPassword := viper.GetString("database.password")
 	dbHost := viper.GetString("database.host")
 	dbPort := viper.GetInt("database.port")

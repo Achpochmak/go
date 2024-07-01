@@ -1,8 +1,10 @@
+// +build integration
+
 package integration_tests
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
@@ -11,13 +13,14 @@ import (
 	"HOMEWORK-1/internal/module"
 	"HOMEWORK-1/internal/repository"
 	"HOMEWORK-1/internal/repository/transactor"
+	"HOMEWORK-1/tests"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDeleteOrderIntegration(t *testing.T) {
-	initConfig()
-	pool := connectDB()
+	tests.InitConfig()
+	pool := tests.ConnectDB()
 	defer pool.Close()
 
 	tm := &transactor.TransactionManager{Pool: pool}
@@ -43,15 +46,16 @@ func TestDeleteOrderIntegration(t *testing.T) {
 		Packaging:   models.NewNoPackaging(),
 		CreatedAt:   time.Now(),
 	}
+	
 	repo.AddOrder(ctx, testOrder)
 
 	err := c.DeleteOrder(ctx, args)
 	assert.NoError(t, err, "DeleteOrder should not return an error")
 
 	order, err := repo.GetOrderByID(ctx, testOrder.ID)
-	fmt.Println(err)
-	assert.Equal(t,order, models.Order{})
+	assert.Error(t, errors.New("scanning one: no rows in result set"), err)
+	assert.Equal(t, order, models.Order{})
 
-	err = repo.DeleteOrder(ctx, testOrder.ID)
+	err = repo.DeleteOrder(ctx, order.ID)
 	assert.NoError(t, err, "DeleteOrder should not return an error")
 }

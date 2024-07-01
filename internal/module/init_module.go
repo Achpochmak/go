@@ -20,6 +20,7 @@ type Repository interface {
 	DeleteOrder(context.Context, models.ID) error
 	ListRefund(context.Context, int, int) ([]models.Order, error)
 	GetOrdersByCustomer(context.Context, models.ID, int) ([]models.Order, error)
+	TruncateTable(context.Context) error
 }
 
 type Deps struct {

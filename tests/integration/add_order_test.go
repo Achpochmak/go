@@ -1,3 +1,5 @@
+// +build integration
+
 package integration_tests
 
 import (
@@ -10,13 +12,14 @@ import (
 	"HOMEWORK-1/internal/module"
 	"HOMEWORK-1/internal/repository"
 	"HOMEWORK-1/internal/repository/transactor"
+	"HOMEWORK-1/tests"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAddOrderIntegration(t *testing.T) {
-	initConfig()
-	pool := connectDB()
+	tests.InitConfig()
+	pool := tests.ConnectDB()
 	defer pool.Close()
 
 	tm := &transactor.TransactionManager{Pool: pool}
@@ -29,7 +32,6 @@ func TestAddOrderIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	c := cli.NewCLI(cli.Deps{Module: pvz})
-
 
 	args := []string{
 		"--id=110",
@@ -54,13 +56,15 @@ func TestAddOrderIntegration(t *testing.T) {
 
 	order, err := repo.GetOrderByID(ctx, expectedOrder.ID)
 	assert.NoError(t, err, "GetOrderByID should not return an error")
+
 	assert.Equal(t, expectedOrder.ID, order.ID)
 	assert.Equal(t, expectedOrder.IDReceiver, order.IDReceiver)
 	assert.Equal(t, expectedOrder.StorageTime, order.StorageTime)
 	assert.Equal(t, expectedOrder.WeightKg, order.WeightKg)
 	assert.Equal(t, expectedOrder.Price, order.Price)
 	assert.Equal(t, expectedOrder.Packaging.GetName(), order.Packaging.GetName())
+	assert.WithinDuration(t, order.CreatedAt, time.Now().UTC(), 10*time.Second)
 
-	err = repo.DeleteOrder(ctx, expectedOrder.ID)
+	err = repo.DeleteOrder(ctx, order.ID)
 	assert.NoError(t, err, "DeleteOrder should not return an error")
 }

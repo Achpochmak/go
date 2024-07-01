@@ -1,3 +1,5 @@
+// +build unit
+
 package module
 
 import (
@@ -22,8 +24,8 @@ type testCaseRefundOrder struct {
 	setupMocks  func(repo *mock_module.MockRepository)
 }
 
-var (
-	order3 = models.Order{
+func TestRefundOrder(t *testing.T) {
+	order := models.Order{
 		ID:           1,
 		IDReceiver:   1,
 		DeliveryTime: time.Now().Add(-24 * time.Hour),
@@ -31,14 +33,19 @@ var (
 		Refund:       false,
 	}
 
-	testCasesRefundOrder = []testCaseRefundOrder{
+	testCasesRefundOrder := []testCaseRefundOrder{
 		{
 			name:       "Valid input",
 			orderID:    1,
 			idReceiver: 1,
 			setupMocks: func(repo *mock_module.MockRepository) {
-				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(order3, nil)
-				repo.EXPECT().UpdateOrder(gomock.Any(), gomock.Any()).Return(nil)
+				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(order, nil)
+
+				updatedOrder := order
+				updatedOrder.Delivered = false
+				updatedOrder.Refund = true
+
+				repo.EXPECT().UpdateOrder(gomock.Any(), &updatedOrder).Return(nil)
 			},
 			expectedErr: nil,
 		},
@@ -47,7 +54,7 @@ var (
 			orderID:    1,
 			idReceiver: 1,
 			setupMocks: func(repo *mock_module.MockRepository) {
-				orderExpired := order1
+				orderExpired := order
 				orderExpired.DeliveryTime = time.Now().Add(-120 * time.Hour)
 				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(orderExpired, nil)
 			},
@@ -58,7 +65,7 @@ var (
 			orderID:    1,
 			idReceiver: 2,
 			setupMocks: func(repo *mock_module.MockRepository) {
-				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(order3, nil)
+				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(order, nil)
 			},
 			expectedErr: customErrors.ErrWrongReceiver,
 		},
@@ -67,7 +74,7 @@ var (
 			orderID:    1,
 			idReceiver: 1,
 			setupMocks: func(repo *mock_module.MockRepository) {
-				orderDelivered := order3
+				orderDelivered := order
 				orderDelivered.Delivered = false
 				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(orderDelivered, nil)
 			},
@@ -78,15 +85,13 @@ var (
 			orderID:    1,
 			idReceiver: 1,
 			setupMocks: func(repo *mock_module.MockRepository) {
-				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(order3, nil)
+				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(order, nil)
 				repo.EXPECT().UpdateOrder(gomock.Any(), gomock.Any()).Return(errors.New("update error"))
 			},
 			expectedErr: errors.New("не удалось обновить заказ: update error"),
 		},
 	}
-)
 
-func TestRefundOrder(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

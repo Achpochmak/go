@@ -1,3 +1,5 @@
+// +build unit
+
 package module
 
 import (
@@ -21,38 +23,50 @@ type testCaseAddOrder struct {
 	setupMocks    func(repo *mock_module.MockRepository)
 }
 
-var (
-	errNoRows = errors.New("scanning one: no rows in result set")
-
-	testCasesAddOrder = []testCaseAddOrder{
+func TestAddOrder(t *testing.T) {
+	errNoRows := errors.New("scanning one: no rows in result set")
+	order := models.Order{
+		ID:          1,
+		IDReceiver:  1,
+		StorageTime: time.Date(2025, 6, 15, 15, 4, 5, 0, time.UTC),
+		WeightKg:    1.0,
+		Price:       100.0,
+		Packaging:   models.NewBox(),
+		CreatedAt:   time.Now(),
+	}
+	expiredOrder := models.Order{
+		ID:          2,
+		IDReceiver:  2,
+		StorageTime: time.Date(2023, 6, 15, 15, 4, 5, 0, time.UTC),
+		WeightKg:    1.0,
+		Price:       100.0,
+		Packaging:   models.NewBox(),
+		CreatedAt:   time.Now(),
+	}
+	largeOrder := models.Order{
+		ID:          3,
+		IDReceiver:  3,
+		StorageTime: time.Date(2025, 6, 15, 15, 4, 5, 0, time.UTC),
+		WeightKg:    100.0,
+		Price:       100.0,
+		Packaging:   models.NewBox(),
+		CreatedAt:   time.Now(),
+	}
+	testCasesAddOrder := []testCaseAddOrder{
 		{
 			name: "Valid input",
-			expectedOrder: models.Order{
-				ID:          1,
-				IDReceiver:  1,
-				StorageTime: time.Date(2025, 6, 15, 15, 4, 5, 0, time.UTC),
-				WeightKg:    1.0,
-				Price:       100.0,
-				Packaging:   models.NewBox(),
-				CreatedAt:   time.Now(),
-			},
+			expectedOrder: order,
 			setupMocks: func(repo *mock_module.MockRepository) {
 				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(models.Order{}, errNoRows)
-				repo.EXPECT().AddOrder(gomock.Any(), gomock.Any()).Return(nil)
+				validOrder:=order
+				validOrder.Price += order.Packaging.Price
+				repo.EXPECT().AddOrder(gomock.Any(), validOrder).Return(nil)
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "Storage time has ended",
-			expectedOrder: models.Order{
-				ID:          2,
-				IDReceiver:  2,
-				StorageTime: time.Date(2023, 6, 15, 15, 4, 5, 0, time.UTC),
-				WeightKg:    1.0,
-				Price:       100.0,
-				Packaging:   models.NewBox(),
-				CreatedAt:   time.Now(),
-			},
+			expectedOrder: expiredOrder,
 			setupMocks: func(repo *mock_module.MockRepository) {
 				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(2)).Return(models.Order{}, errNoRows)
 			},
@@ -60,24 +74,14 @@ var (
 		},
 		{
 			name: "Weight is too big",
-			expectedOrder: models.Order{
-				ID:          3,
-				IDReceiver:  3,
-				StorageTime: time.Date(2025, 6, 15, 15, 4, 5, 0, time.UTC),
-				WeightKg:    100.0,
-				Price:       100.0,
-				Packaging:   models.NewBox(),
-				CreatedAt:   time.Now(),
-			},
+			expectedOrder: largeOrder,
 			setupMocks: func(repo *mock_module.MockRepository) {
 				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(3)).Return(models.Order{}, errNoRows)
 			},
 			expectedErr: customErrors.ErrWeightIsTooBig,
 		},
 	}
-)
 
-func TestAddOrder(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

@@ -1,3 +1,5 @@
+// +build integration
+
 package integration_tests
 
 import (
@@ -10,13 +12,14 @@ import (
 	"HOMEWORK-1/internal/module"
 	"HOMEWORK-1/internal/repository"
 	"HOMEWORK-1/internal/repository/transactor"
+	"HOMEWORK-1/tests"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRefundOrderIntegration(t *testing.T) {
-	initConfig()
-	pool := connectDB()
+	tests.InitConfig()
+	pool := tests.ConnectDB()
 	defer pool.Close()
 
 	tm := &transactor.TransactionManager{Pool: pool}
@@ -28,7 +31,6 @@ func TestRefundOrderIntegration(t *testing.T) {
 
 	ctx := context.Background()
 	c := cli.NewCLI(cli.Deps{Module: pvz})
-
 
 	order := models.Order{
 		ID:           107,
@@ -48,10 +50,11 @@ func TestRefundOrderIntegration(t *testing.T) {
 	}
 
 	repo.AddOrder(ctx, order)
+
 	err := c.Refund(ctx, args)
 	assert.NoError(t, err, "RefundOrder should not return an error")
-	newOrder, err := repo.GetOrderByID(ctx, order.ID)
 
+	newOrder, err := repo.GetOrderByID(ctx, order.ID)
 	assert.NoError(t, err, "GetOrderByID should not return an error")
 	assert.True(t, newOrder.Refund)
 

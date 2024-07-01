@@ -1,3 +1,5 @@
+// +build unit
+
 package module
 
 import (
@@ -23,35 +25,29 @@ type testCaseDeliverOrder struct {
 	expectedOrder []models.Order
 }
 
-var (
-	order1 = models.Order{
+func TestDeliverOrder(t *testing.T) {
+	order1 := models.Order{
 		ID:          1,
 		IDReceiver:  1,
 		StorageTime: time.Now().Add(24 * time.Hour),
 		Delivered:   false,
 	}
-	order2 = models.Order{
+	order2 := models.Order{
 		ID:          2,
 		IDReceiver:  1,
 		StorageTime: time.Now().Add(24 * time.Hour),
 		Delivered:   false,
 	}
 
-	testCasesDeliverOrder = []testCaseDeliverOrder{
+	testCasesDeliverOrder := []testCaseDeliverOrder{
 		{
 			name:       "Valid input",
 			ordersID:   []int{1, 2},
 			idReceiver: 1,
-			setupMocks: func(repo *mock_module.MockRepository) {
-				updatedOrder1 := order1
-				updatedOrder1.Delivered = true
-				updatedOrder1.DeliveryTime = time.Now().UTC()
-				updatedOrder2 := order2
-				updatedOrder2.Delivered = true
-				updatedOrder2.DeliveryTime = time.Now().UTC()
-				
+			setupMocks: func(repo *mock_module.MockRepository) {				
 				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(1)).Return(order1, nil)
 				repo.EXPECT().GetOrderByID(gomock.Any(), models.ID(2)).Return(order2, nil)
+				//Так как время доставки будет немного отличаться,  используется gomock.Any() вместо заказа
 				repo.EXPECT().UpdateOrder(gomock.Any(), gomock.Any()).Return(nil)
 				repo.EXPECT().UpdateOrder(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -100,9 +96,7 @@ var (
 			expectedErr: errors.New("не получилось обновить заказ: update error"),
 		},
 	}
-)
 
-func TestDeliverOrder(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

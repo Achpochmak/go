@@ -1,3 +1,5 @@
+// +build unit
+
 package cli
 
 type testCase struct {

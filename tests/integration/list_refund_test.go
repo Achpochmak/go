@@ -1,11 +1,11 @@
+//go:build integration
+// +build integration
+
 package integration_tests
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"testing"
 	"time"
 
@@ -14,13 +14,14 @@ import (
 	"HOMEWORK-1/internal/module"
 	"HOMEWORK-1/internal/repository"
 	"HOMEWORK-1/internal/repository/transactor"
+	"HOMEWORK-1/tests"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestListRefundIntegration(t *testing.T) {
-	initConfig()
-	pool := connectDB()
+	tests.InitConfig()
+	pool := tests.ConnectDB()
 	defer pool.Close()
 
 	tm := &transactor.TransactionManager{Pool: pool}
@@ -29,6 +30,7 @@ func TestListRefundIntegration(t *testing.T) {
 		Repository: repo,
 		Transactor: tm,
 	})
+	c := cli.NewCLI(cli.Deps{Module: mod})
 
 	ctx := context.Background()
 
@@ -56,25 +58,12 @@ func TestListRefundIntegration(t *testing.T) {
 		assert.NoError(t, err, "AddOrder should not return an error")
 	}
 
-	c := cli.NewCLI(cli.Deps{Module: mod})
-
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	outputCh := make(chan string)
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		outputCh <- buf.String()
-	}()
+	w, ro := tests.RedirectStdoutToChannel()
 
 	err := c.ListRefund(ctx, []string{""})
 	assert.NoError(t, err, "ListRefund should not return an error")
 
-	w.Close()
-	os.Stdout = oldStdout
-	output := <-outputCh
+	output := ro.RedirectChannelToStdout(w)
 
 	var expectedOutput string
 	for _, order := range orders {
