@@ -36,6 +36,8 @@ func (c *CLI) worker(ctx context.Context) {
 				err = c.ListRefund(ctx, t.args)
 			case setWorkers:
 				err = c.setWorkers(t.args)
+			case switchOutput:
+				c.switchOutputMode()
 			case exit:
 				fmt.Println("Exiting...")
 				c.mu.Lock()

@@ -6,6 +6,9 @@ import (
 	"context"
 	"sync"
 
+	"HOMEWORK-1/internal/infrastructure/app/sender"
+	"HOMEWORK-1/internal/infrastructure/kafka"
+	"HOMEWORK-1/internal/infrastructure/outbox"
 	"HOMEWORK-1/internal/models"
 )
 
@@ -21,11 +24,12 @@ const (
 	listRefund          = "listrefund"
 	exit                = "exit"
 	setWorkers          = "setworkers"
+	switchOutput        = "switch"
 )
 
 const (
 	helpDescription                = "справка"
-	addOrderDescription            = "добавить заказ: использование add --id=54 --idReceiver=1 --storageTime=2025-06-15T15:04:05Z --weightKg=1 --price=100(опционально --packaging=box|film|bag)"
+	addOrderDescription            = "добавить заказ: использование add --id=1 --idReceiver=1 --storageTime=2025-06-15T15:04:05Z --weightKg=1 --price=100(опционально --packaging=box|film|bag)"
 	deleteOrderDescription         = "удалить заказ: использование delete --id=1"
 	deliverOrderDescription        = "доставить заказ: использование deliver --id=1,2 --idReceiver=1"
 	listOrderDescription           = "вывести список заказов: использование list"
@@ -35,6 +39,7 @@ const (
 	listRefundDescription          = "вывести список возвратов: использование listrefund (опционально:--page=1 --pageSize=1)"
 	exitDescription                = "exit"
 	setWorkersDescription          = "вывести список возвратов: использование setWorkers --num=5"
+	switchOutputDescription        = "изменить метод вывода: switch"
 )
 
 type command struct {
@@ -67,6 +72,17 @@ type CLI struct {
 	wg            sync.WaitGroup
 	mu            sync.Mutex
 	taskQueueOpen bool
+	outbox        outbox.OutboxRepo
+	outputKafka   bool
+	kafkaConfig   KafkaConfig
+	kafkaConsumer *kafka.Consumer
+	AnswerID      int
+	kafkaSender   *sender.KafkaSender
+}
+
+type KafkaConfig struct {
+	Brokers []string
+	Topic   string
 }
 
 type task struct {

@@ -9,7 +9,8 @@ build:
 	docker compose build
 
 up-all:
-	docker compose up -d postgres app
+	docker compose up -d postgres
+	docker compose up -d zookeeper kafka1 kafka2 kafka3
 
 down:
 	docker compose down

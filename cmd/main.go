@@ -24,7 +24,6 @@ func initConfig() {
 }
 
 func connectDB() *pgxpool.Pool {
-
 	dbPassword := viper.GetString("database.password")
 	dbHost := viper.GetString("database.host")
 	dbPort := viper.GetInt("database.port")
