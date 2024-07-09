@@ -5,21 +5,17 @@ import (
 	"time"
 
 	"HOMEWORK-1/internal/infrastructure/app/sender"
-	"HOMEWORK-1/internal/infrastructure/kafka"
 
 	"github.com/stretchr/testify/assert"
 )
-
+var brokers = []string{
+	"127.0.0.1:9091",
+}
 func TestSendMessage(t *testing.T) {
-	brokers := []string{"localhost:9091"}
 	topic := "test-topic"
 
-	producer, err := kafka.NewProducer(brokers)
-	if err != nil {
-		t.Fatalf("Failed to create Kafka producer: %v", err)
-	}
-
-	kafkaSender := sender.NewKafkaSender(producer, topic)
+	kafkaSender, err := sender.NewKafkaSender(brokers, topic)
+	assert.NoError(t, err, "Expected no error from NewKafkaSender")
 
 	testMessage := &sender.Message{
 		AnswerID:      1,

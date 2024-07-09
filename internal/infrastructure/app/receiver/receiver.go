@@ -3,6 +3,7 @@ package receiver
 import (
 	"HOMEWORK-1/internal/infrastructure/kafka"
 	"errors"
+	"fmt"
 
 	"github.com/IBM/sarama"
 )
@@ -14,11 +15,15 @@ type KafkaReceiver struct {
 	handlers map[string]HandleFunc
 }
 
-func NewReceiver(consumer *kafka.Consumer, handlers map[string]HandleFunc) *KafkaReceiver {
+func NewReceiver(brokers []string, handlers map[string]HandleFunc) (*KafkaReceiver, error) {
+	consumer, err := kafka.NewConsumer(brokers)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка создания Kafka consumer: %w", err)
+	}
 	return &KafkaReceiver{
 		consumer: consumer,
 		handlers: handlers,
-	}
+	}, nil
 }
 
 func (r *KafkaReceiver) Subscribe(topic string) error {

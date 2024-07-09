@@ -12,7 +12,6 @@ import (
 	"HOMEWORK-1/internal/cli"
 	"HOMEWORK-1/internal/infrastructure/app/receiver"
 	"HOMEWORK-1/internal/infrastructure/app/sender"
-	"HOMEWORK-1/internal/infrastructure/kafka"
 
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
@@ -22,18 +21,6 @@ func TestKafkaIntegration(t *testing.T) {
 	var err error
 	topic := "test"
 	brokers := []string{"127.0.0.1:9091"}
-
-	consumer, err := kafka.NewConsumer(brokers)
-	if err != nil {
-		assert.NoError(t, err)
-		return
-	}
-
-	producer, err := kafka.NewProducer(brokers)
-	if err != nil {
-		assert.NoError(t, err)
-		return
-	}
 
 	messageChannel := make(chan *sender.Message)
 
@@ -49,8 +36,12 @@ func TestKafkaIntegration(t *testing.T) {
 		},
 	}
 
-	testSender := sender.NewKafkaSender(producer, topic)
-	testReceiver := receiver.NewReceiver(consumer, handlers)
+	testSender, err := sender.NewKafkaSender(brokers, topic)
+	assert.NoError(t, err, "Expected no error from NewKafkaSender")
+
+	testReceiver, err := receiver.NewReceiver(brokers, handlers)
+	assert.NoError(t, err, "Expected no error from NewKafkaReceiver")
+
 	outbox := cli.OutboxRepo{
 		Mu:     sync.RWMutex{},
 		Outbox: make(map[int]*sender.Message),

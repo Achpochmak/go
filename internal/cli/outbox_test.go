@@ -6,24 +6,18 @@ import (
 
 	"HOMEWORK-1/internal/cli"
 	"HOMEWORK-1/internal/infrastructure/app/sender"
-	"HOMEWORK-1/internal/infrastructure/kafka"
 
 	"context"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestOutboxRepo(t *testing.T) {
 	brokers := []string{"localhost:9091"}
 	topic := "test-topic"
 
-	producer, err := kafka.NewProducer(brokers)
-	if err != nil {
-		require.NoError(t, err)
-	}
-
-	kafkaSender := sender.NewKafkaSender(producer, topic)
+	kafkaSender, err := sender.NewKafkaSender(brokers, topic)
+	assert.NoError(t, err, "Expected no error from NewKafkaSender")
 
 	outbox := cli.OutboxRepo{
 		Outbox: make(map[int]*sender.Message),
@@ -43,12 +37,12 @@ func TestOutboxRepo(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go outbox.OutboxProcessor(ctx)
-
+	//Время на обработку
 	time.Sleep(2 * time.Second)
 
 	processedMsg := outbox.Outbox[msg.AnswerID]
 	assert.True(t, processedMsg.IsProcessed)
-	assert.NotEqual(t, time.Time{}, processedMsg.ProcessedInOB)
+	assert.NotEqual(t, time.Now(), processedMsg.ProcessedInOB)
 
 	cancel()
 }

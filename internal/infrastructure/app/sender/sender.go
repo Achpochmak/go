@@ -30,11 +30,16 @@
 		topic    string
 	}
 
-	func NewKafkaSender(producer *kafka.Producer, topic string) *KafkaSender {
+	func NewKafkaSender(brokers []string, topic string) (*KafkaSender, error) {
+		producer, err := kafka.NewProducer(brokers)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка создания Kafka producer: %w", err)
+		}
+	
 		return &KafkaSender{
 			producer,
 			topic,
-		}
+		}, nil
 	}
 
 	func (s *KafkaSender) SendMessage(message *Message) error {
