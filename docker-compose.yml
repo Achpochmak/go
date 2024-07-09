@@ -106,8 +106,6 @@ services:
     hostname: server
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/oms
-    ports:
-      - 8080:8080
     command: ./app
     depends_on:
       postgres:
