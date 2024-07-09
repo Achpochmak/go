@@ -3,15 +3,16 @@ package cli
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
+	"HOMEWORK-1/internal/infrastructure/app/receiver"
 	"HOMEWORK-1/internal/infrastructure/app/sender"
 	"HOMEWORK-1/internal/infrastructure/kafka"
-	"HOMEWORK-1/internal/infrastructure/outbox"
 
 	"github.com/IBM/sarama"
 )
@@ -68,13 +69,13 @@ func NewCLI(d Deps) *CLI {
 		notifications: make(chan string, 10),
 		taskQueueOpen: true,
 		wg:            sync.WaitGroup{},
-		outbox: outbox.OutboxRepo{
+		outputKafka:   true,
+		outbox: OutboxRepo{
 			Mu:     sync.RWMutex{},
 			Outbox: make(map[int]*sender.Message),
 		},
-		outputKafka: false,
 		kafkaConfig: KafkaConfig{
-			Brokers: outbox.Brokers,
+			Brokers: brokers,
 			Topic:   "my-topic",
 		},
 		AnswerID: 0,
@@ -88,6 +89,7 @@ func (c *CLI) Run() error {
 	go c.notificationHandler()
 	defer close(c.notifications)
 	ctx, cancel := context.WithCancel(context.Background())
+	c.InitKafka(ctx)
 
 	defer cancel()
 	for i := 0; i < c.numWorkers; i++ {
@@ -97,12 +99,16 @@ func (c *CLI) Run() error {
 
 	c.handleSignals(cancel)
 
-	c.InitKafka(ctx)
+	ctxOutbox, cancelOutbox := context.WithCancel(context.Background())
+
+	//Запускаем запись в outbox
+	go c.outbox.OutboxProcessor(ctxOutbox)
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		input, err := reader.ReadString('\n')
 		if err != nil {
+			cancelOutbox()
 			return err
 		}
 
@@ -113,7 +119,7 @@ func (c *CLI) Run() error {
 		}
 
 		commandName := args[0]
-		c.processCommand(commandName, input)
+		c.ProcessCommand(commandName, args[1:])
 
 		if commandName == exit {
 			c.mu.Lock()
@@ -131,15 +137,15 @@ func (c *CLI) Run() error {
 		}
 
 		if c.taskQueueOpen {
-			if c.outputKafka {
-				go c.ConsumeFromKafka(ctx)
-			} else {
-				c.ReadFromStdin(cancel)
+			if !c.outputKafka {
+				//если вывод не через кафку, записываем в очередь выполнения то, что получили из консоли
+				c.taskQueue <- task{commandName: args[0], args: args[1:]}
 			}
 		} else {
 			fmt.Println("Доступ закрыт")
 		}
 	}
+	cancelOutbox()
 
 	c.wg.Wait()
 	fmt.Println("Все задачи завершены.")
@@ -147,88 +153,26 @@ func (c *CLI) Run() error {
 	return nil
 }
 
-func (c *CLI) processCommand(commandName, input string) {
-	go func() {
-		ctxOutbox, cancelOutbox := context.WithCancel(context.Background())
-		defer cancelOutbox()
+//Запись сообщения в outbox
+func (c *CLI) ProcessCommand(commandName string, args []string) {
+	c.AnswerID++
+	answerID := c.AnswerID
 
-		c.AnswerID++
-		answerID := c.AnswerID
-		c.outbox.CreateMessage(&sender.Message{Command: commandName, Request: input, AnswerID: int(answerID)})
-		c.outbox.OutboxProcessor(ctxOutbox)
-		<-ctxOutbox.Done()
-
-			msg := sender.Message{
-				Command:       commandName,
-				Request:       input,
-				AnswerID:      int(answerID),
-				CreatedAt:     time.Now(),
-				IsAquired:     true,
-				IsProcessed:   true,
-				Success:       true,
-				ProcessedInOB: time.Now(),
-			}
-			c.kafkaSender.SendMessage(&msg)
-		
-	}()
-}
-func (c *CLI) ConsumeFromKafka(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			c.kafkaConsumer.Consume(ctx, func(message *sarama.ConsumerMessage) {
-				command := strings.Fields(string(message.Value))
-				if len(command) > 0 {
-					commandName := command[0]
-					c.taskQueue <- task{commandName: commandName, args: command[1:]}
-				}
-			})
-		}
+	msg := sender.Message{
+		Command:     commandName,
+		Args:        args,
+		AnswerID:    int(answerID),
+		CreatedAt:   time.Now(),
+		Success:     false,
+		IsAquired:   false,
+		IsProcessed: false,
 	}
-}
-func (c *CLI) ReadFromStdin(cancel context.CancelFunc) {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading input:", err)
-			continue
-		}
 
-		args := strings.Fields(strings.TrimSpace(input))
-		if len(args) == 0 {
-			fmt.Println("command isn't set")
-			continue
-		}
-
-		commandName := args[0]
-		c.processCommand(commandName, input)
-
-		if commandName == exit {
-			c.mu.Lock()
-			if c.taskQueueOpen {
-				c.taskQueueOpen = false
-				close(c.taskQueue)
-			}
-			c.mu.Unlock()
-
-			go func() {
-				time.Sleep(5 * time.Second)
-				cancel()
-			}()
-			break
-		}
-
-		c.taskQueue <- task{commandName: commandName, args: args[1:]}
-
-	}
+	c.outbox.CreateMessage(&msg)
 }
 
 func (c *CLI) InitKafka(ctx context.Context) error {
-	var err error
-	c.kafkaConsumer, err = kafka.NewConsumer(c.kafkaConfig.Brokers)
+	consumer, err := kafka.NewConsumer(c.kafkaConfig.Brokers)
 	if err != nil {
 		return fmt.Errorf("ошибка создания Kafka consumer: %w", err)
 	}
@@ -238,27 +182,24 @@ func (c *CLI) InitKafka(ctx context.Context) error {
 		return fmt.Errorf("ошибка создания Kafka producer: %w", err)
 	}
 
-	c.kafkaSender = sender.NewKafkaSender(producer, c.kafkaConfig.Topic)
-
-	consumerGroup := kafka.NewConsumerGroup()
-	group, err := sarama.NewConsumerGroup(c.kafkaConfig.Brokers, "group-id", nil)
-	if err != nil {
-		return fmt.Errorf("ошибка создания Kafka consumer group: %w", err)
+	handlers := map[string]receiver.HandleFunc{
+		c.kafkaConfig.Topic: func(message *sarama.ConsumerMessage) {
+			msg := sender.Message{}
+			err = json.Unmarshal(message.Value, &msg)
+			if err != nil {
+				fmt.Println("Consumer error", err)
+			}
+			//Если вывод через кафку, то записываем в очередь выполения
+			if c.taskQueueOpen && c.outputKafka {
+				c.taskQueue <- task{commandName: msg.Command, args: msg.Args}
+			}
+		},
 	}
 
-	go func() {
-		for {
-			if err := group.Consume(ctx, []string{c.kafkaConfig.Topic}, consumerGroup); err != nil {
-				fmt.Printf("Error from consumer: %v\n", err)
-			}
-			if ctx.Err() != nil {
-				return
-			}
-			consumerGroup.Ready = make(chan *sarama.ConsumerMessage)
-		}
-	}()
+	c.KafkaSender = sender.NewKafkaSender(producer, c.kafkaConfig.Topic)
+	c.KafkaReceiver = receiver.NewReceiver(consumer, handlers)
 
-	<-consumerGroup.IsReady()
-	fmt.Println("Kafka consumer group is ready.")
+	c.outbox.Sender = c.KafkaSender
+	c.KafkaReceiver.Subscribe(c.kafkaConfig.Topic)
 	return nil
 }

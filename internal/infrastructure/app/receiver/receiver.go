@@ -3,7 +3,6 @@ package receiver
 import (
 	"HOMEWORK-1/internal/infrastructure/kafka"
 	"errors"
-	"fmt"
 
 	"github.com/IBM/sarama"
 )
@@ -35,8 +34,7 @@ func (r *KafkaReceiver) Subscribe(topic string) error {
 	if err != nil {
 		return err
 	}
-
-	initialOffset := sarama.OffsetOldest
+	initialOffset := sarama.OffsetNewest
 
 	for _, partition := range partitionList {
 		pc, err := r.consumer.SingleConsumer.ConsumePartition(topic, partition, initialOffset)
@@ -48,8 +46,6 @@ func (r *KafkaReceiver) Subscribe(topic string) error {
 		go func(pc sarama.PartitionConsumer, partition int32) {
 			for message := range pc.Messages() {
 				handler(message)
-				fmt.Println("Read Topic: ", topic, " Partition: ", partition, " Offset: ", message.Offset)
-				fmt.Println("Received Key: ", string(message.Key), " Value: ", string(message.Value))
 			}
 		}(pc, partition)
 	}

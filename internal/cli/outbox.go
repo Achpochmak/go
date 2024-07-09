@@ -1,49 +1,41 @@
-package outbox
+package cli
 
 import (
 	"HOMEWORK-1/internal/infrastructure/app/sender"
-	"HOMEWORK-1/internal/infrastructure/kafka"
 	"context"
-	"fmt"
 	"sync"
 	"time"
 )
 
-var Brokers = []string{
-	"127.0.0.1:9091",
-	"127.0.0.1:9092",
-	"127.0.0.1:9093",
-}
-
 type OutboxRepo struct {
 	Mu     sync.RWMutex
 	Outbox map[int]*sender.Message
+	Sender *sender.KafkaSender
 }
 
 func (o *OutboxRepo) CreateMessage(msg *sender.Message) {
 	o.Mu.Lock()
 	defer o.Mu.Unlock()
-	msg.CreatedAt = time.Now()
 	o.Outbox[msg.AnswerID] = msg
 }
 
 func (o *OutboxRepo) OutboxProcessor(ctx context.Context) {
 	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 			message := o.getMessageFromRepoToOutbox()
-			if message == nil {
-				continue
-			}
-
-			err := producerExample(Brokers, message)
-			if err != nil {
-				o.rollback(message)
-			} else {
-				o.commit(message)
+			if message != nil {
+				err := o.Sender.SendMessage(message)
+				if err != nil {
+					o.rollback(message)
+				} else {
+					o.commit(message)
+				}
 			}
 		}
 	}
@@ -53,6 +45,7 @@ func (o *OutboxRepo) commit(a *sender.Message) {
 	o.Mu.Lock()
 	defer o.Mu.Unlock()
 	a.IsProcessed = true
+	a.ProcessedInOB = time.Now()
 	o.Outbox[a.AnswerID] = a
 }
 
@@ -73,26 +66,6 @@ func (o *OutboxRepo) getMessageFromRepoToOutbox() *sender.Message {
 			value.RetryCount++
 			return value
 		}
-	}
-	return nil
-}
-
-func producerExample(brokers []string, payment *sender.Message) error {
-	kafkaProducer, err := kafka.NewProducer(brokers)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	producer := sender.NewKafkaSender(kafkaProducer, "my-topic")
-	err = producer.SendMessage(payment)
-	if err != nil {
-		return err
-	}
-	err = kafkaProducer.Close()
-	if err != nil {
-		fmt.Println("Close producers error ", err)
-		return err
 	}
 	return nil
 }

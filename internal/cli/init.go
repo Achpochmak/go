@@ -6,9 +6,8 @@ import (
 	"context"
 	"sync"
 
+	"HOMEWORK-1/internal/infrastructure/app/receiver"
 	"HOMEWORK-1/internal/infrastructure/app/sender"
-	"HOMEWORK-1/internal/infrastructure/kafka"
-	"HOMEWORK-1/internal/infrastructure/outbox"
 	"HOMEWORK-1/internal/models"
 )
 
@@ -72,12 +71,12 @@ type CLI struct {
 	wg            sync.WaitGroup
 	mu            sync.Mutex
 	taskQueueOpen bool
-	outbox        outbox.OutboxRepo
+	outbox        OutboxRepo
 	outputKafka   bool
 	kafkaConfig   KafkaConfig
-	kafkaConsumer *kafka.Consumer
+	KafkaReceiver *receiver.KafkaReceiver
 	AnswerID      int
-	kafkaSender   *sender.KafkaSender
+	KafkaSender   *sender.KafkaSender
 }
 
 type KafkaConfig struct {
@@ -88,4 +87,10 @@ type KafkaConfig struct {
 type task struct {
 	commandName string
 	args        []string
+}
+
+var brokers = []string{
+	"127.0.0.1:9091",
+	"127.0.0.1:9092",
+	"127.0.0.1:9093",
 }
