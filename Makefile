@@ -42,11 +42,10 @@ down-service:
 
 # запуск тестового окружения при помощи docker-compose
 .PHONY: test-base-up
-test-base-up:
+test-up-all:
 	docker compose up -d zookeeper kafka1
 	docker compose -f docker-compose.test.yml up -d
 	goose -dir "$(MIGRATION_FOLDER)" postgres "$(POSTGRES_TEST_SETUP)" up
-
 
 .PHONY: test-base-down
 test-base-down:

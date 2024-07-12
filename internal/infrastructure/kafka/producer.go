@@ -106,9 +106,6 @@ func (k *Producer) SendSyncMessages(messages []*sarama.ProducerMessage) error {
 	return err
 }
 
-func (k *Producer) SendAsyncMessage(message *sarama.ProducerMessage) {
-	k.asyncProducer.Input() <- message
-}
 
 func (k *Producer) Close() error {
 	err := k.syncProducer.Close()

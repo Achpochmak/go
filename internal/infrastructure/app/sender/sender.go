@@ -1,90 +1,91 @@
 //go:generate mockgen -source ./sender.go -destination=./mocks/sender.go -package=mock_sender
 
-	package sender
+package sender
 
-	import (
-		"HOMEWORK-1/internal/infrastructure/kafka"
-		"encoding/json"
-		"fmt"
-		"time"
+import (
+	"HOMEWORK-1/internal/infrastructure/kafka"
+	"encoding/json"
+	"fmt"
+	"time"
 
-		"github.com/IBM/sarama"
-	)
+	"github.com/IBM/sarama"
+)
 
-	type Message struct {
-		AnswerID      int
-		Command       string
-		Args          []string
-		Success       bool
-		CreatedAt     time.Time
-		ProcessedInOB time.Time
+type Message struct {
+	AnswerID      int
+	Command       string
+	Args          []string
+	Status        string
+	Success       bool
+	CreatedAt     time.Time
+	ProcessedInOB time.Time
 
-		IsAquired   bool
-		IsProcessed bool
+	IsAquired   bool
+	IsProcessed bool
 
-		RetryCount uint
+	RetryCount uint
+}
+
+type KafkaSender struct {
+	producer *kafka.Producer
+	topic    string
+}
+
+func NewKafkaSender(brokers []string, topic string) (*KafkaSender, error) {
+	producer, err := kafka.NewProducer(brokers)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка создания Kafka producer: %w", err)
 	}
 
-	type KafkaSender struct {
-		producer *kafka.Producer
-		topic    string
+	return &KafkaSender{
+		producer,
+		topic,
+	}, nil
+}
+
+func (s *KafkaSender) SendMessage(message *Message) error {
+	kafkaMsg, err := s.buildMessage(*message)
+	if err != nil {
+		fmt.Println("Send message marshal error", err)
+		return err
 	}
 
-	func NewKafkaSender(brokers []string, topic string) (*KafkaSender, error) {
-		producer, err := kafka.NewProducer(brokers)
-		if err != nil {
-			return nil, fmt.Errorf("ошибка создания Kafka producer: %w", err)
-		}
-	
-		return &KafkaSender{
-			producer,
-			topic,
-		}, nil
+	_, _, err = s.producer.SendSyncMessage(kafkaMsg)
+
+	if err != nil {
+		fmt.Println("Send message connector error", err)
+		s.updateMessageStatus(message, false)
+		return err
 	}
 
-	func (s *KafkaSender) SendMessage(message *Message) error {
-		kafkaMsg, err := s.buildMessage(*message)
-		if err != nil {
-			fmt.Println("Send message marshal error", err)
-			return err
-		}
+	s.updateMessageStatus(message, true)
 
-		_, _, err = s.producer.SendSyncMessage(kafkaMsg)
-		
-		if err != nil {
-			fmt.Println("Send message connector error", err)
-			s.updateMessageStatus(message, false)
-			return err
-		}
+	return nil
+}
 
-		s.updateMessageStatus(message, true)
+func (s *KafkaSender) buildMessage(message Message) (*sarama.ProducerMessage, error) {
+	msg, err := json.Marshal(message)
 
-		return nil
+	if err != nil {
+		fmt.Println("Send message marshal error", err)
+		return nil, err
 	}
 
-	func (s *KafkaSender) buildMessage(message Message) (*sarama.ProducerMessage, error) {
-		msg, err := json.Marshal(message)
-
-		if err != nil {
-			fmt.Println("Send message marshal error", err)
-			return nil, err
-		}
-
-		return &sarama.ProducerMessage{
-			Topic:     s.topic,
-			Value:     sarama.ByteEncoder(msg),
-			Partition: -1,
-			Key:       sarama.StringEncoder(fmt.Sprint(message.AnswerID)),
-			Headers: []sarama.RecordHeader{ // например, в хедер можно записать версию релиза
-				{
-					Key:   []byte("test-header"),
-					Value: []byte("test-value"),
-				},
+	return &sarama.ProducerMessage{
+		Topic:     s.topic,
+		Value:     sarama.ByteEncoder(msg),
+		Partition: -1,
+		Key:       sarama.StringEncoder(fmt.Sprint(message.AnswerID)),
+		Headers: []sarama.RecordHeader{ // например, в хедер можно записать версию релиза
+			{
+				Key:   []byte("test-header"),
+				Value: []byte("test-value"),
 			},
-		}, nil
-	}
+		},
+	}, nil
+}
 
-	func (s *KafkaSender) updateMessageStatus(message *Message, success bool) {
-		message.Success = success
-		message.ProcessedInOB = time.Now()
-	}
+func (s *KafkaSender) updateMessageStatus(message *Message, success bool) {
+	message.Success = success
+	message.ProcessedInOB = time.Now()
+}

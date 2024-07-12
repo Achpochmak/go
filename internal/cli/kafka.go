@@ -13,18 +13,18 @@ import (
 func (c *CLI) InitKafka(ctx context.Context) error {
 	var err error
 
-	c.KafkaSender, err = sender.NewKafkaSender(c.kafkaConfig.Brokers, c.kafkaConfig.Topic)
+	KafkaSender, err := sender.NewKafkaSender(c.kafkaConfig.Brokers, c.kafkaConfig.Topic)
 	if err != nil {
 		return err
 	}
 
-	c.KafkaReceiver, err = receiver.NewReceiver(c.kafkaConfig.Brokers, c.getKafkaHandlers())
+	KafkaReceiver, err := receiver.NewReceiver(c.kafkaConfig.Brokers, c.getKafkaHandlers())
 	if err != nil {
 		return err
 	}
 
-	c.outbox.Sender = c.KafkaSender
-	c.KafkaReceiver.Subscribe(c.kafkaConfig.Topic)
+	c.outbox.Sender = KafkaSender
+	KafkaReceiver.Subscribe(c.kafkaConfig.Topic)
 	return nil
 }
 
@@ -37,8 +37,8 @@ func (c *CLI) getKafkaHandlers() map[string]receiver.HandleFunc {
 				return
 			}
 			//Вывод из кафки(задание 4)
-			if c.taskQueueOpen && c.outputKafka {
-				c.taskQueue <- task{commandName: msg.Command, args: msg.Args}
+			if c.outputKafka{
+				fmt.Println("Kafka: ", msg.Command, " status: ", msg.Status)
 			}
 		},
 	}

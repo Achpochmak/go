@@ -22,7 +22,5 @@ WORKDIR /
 
 COPY --from=build /bin/app /app
 
-EXPOSE 8080
-EXPOSE 8090
 
 ENTRYPOINT ["/app"]

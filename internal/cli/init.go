@@ -6,8 +6,6 @@ import (
 	"context"
 	"sync"
 
-	"HOMEWORK-1/internal/infrastructure/app/receiver"
-	"HOMEWORK-1/internal/infrastructure/app/sender"
 	"HOMEWORK-1/internal/models"
 )
 
@@ -74,9 +72,7 @@ type CLI struct {
 	outbox        OutboxRepo
 	outputKafka   bool
 	kafkaConfig   KafkaConfig
-	KafkaReceiver *receiver.KafkaReceiver
 	AnswerID      int
-	KafkaSender   *sender.KafkaSender
 }
 
 type KafkaConfig struct {

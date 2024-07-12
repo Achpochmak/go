@@ -3,3 +3,5 @@ orders.json
 pvz.json
 /pgdata
 .env
+/bin
+/vendor-proto

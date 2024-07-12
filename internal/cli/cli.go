@@ -130,7 +130,6 @@ func (c *CLI) handleInput(input string) error {
 	}
 
 	commandName := args[0]
-	c.ProcessCommand(commandName, args[1:])
 
 	if commandName == exit {
 		c.mu.Lock()
@@ -148,27 +147,10 @@ func (c *CLI) handleInput(input string) error {
 			c.mu.Unlock()
 		}()
 	}
-	//Вывод из консоли(задание 4)
-	if c.taskQueueOpen && !c.outputKafka {
-		c.taskQueue <- task{commandName: commandName, args: args[1:]}
-	}
+
+	c.taskQueue <- task{commandName: commandName, args: args[1:]}
+
 	return nil
 }
 
-// Запись сообщения в outbox
-func (c *CLI) ProcessCommand(commandName string, args []string) {
-	c.AnswerID++
-	answerID := c.AnswerID
 
-	msg := sender.Message{
-		Command:     commandName,
-		Args:        args,
-		AnswerID:    int(answerID),
-		CreatedAt:   time.Now(),
-		Success:     false,
-		IsAquired:   false,
-		IsProcessed: false,
-	}
-
-	c.outbox.CreateMessage(&msg)
-}
