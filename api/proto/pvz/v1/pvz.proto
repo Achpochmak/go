@@ -1,0 +1,163 @@
+syntax = "proto3";
+
+package pvz;
+
+option go_package = "HOMEWORK-1/pkg/grpc/pvz;pvz";
+
+import "google/protobuf/empty.proto";
+import "google/api/field_behavior.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto"; 
+import "validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+service PVZ {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_tag) = {
+    description: "PVZ service example"
+    external_docs: {
+      url: "https://github.com/grpc-ecosystem/grpc-gateway?tab=readme-ov-file";
+      description: "Find out more about grpc-gateway";
+    }
+  };
+  rpc AddOrder(AddOrderRequest) returns (google.protobuf.Empty){
+    option(google.api.http) = {
+      post: "/v1/add-order"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      security: {
+        security_requirement: {
+          key: "ApiKeyAuth";
+          value: {}
+        }
+      }
+    };
+  };
+
+
+  rpc DeleteOrder(DeleteOrderRequest) returns (DeleteOrderResponse){
+    option(google.api.http) = {
+      delete: "/v1/delete-order"
+    };
+  };
+
+
+  rpc ListOrder(ListOrderRequest) returns (ListOrderResponse){
+    option(google.api.http) = {
+      get: "/v1/list-order"
+    };
+  };
+
+  rpc ListRefund(ListRefundRequest) returns (ListRefundResponse){
+    option(google.api.http) = {
+      get: "/v1/list-refund"
+    };
+  };
+
+  rpc FindOrder(FindOrderRequest) returns (FindOrderResponse){
+    option(google.api.http) = {
+      get: "/v1/list-order/{id.id}"
+    };
+  };
+
+}
+
+message OrderInfo{
+  string order = 1;
+}
+
+message Order {
+  int64 id = 1 [(validate.rules).int64.gt = 15];
+  int64 idReceiver = 2;
+  google.protobuf.Timestamp storageTime = 3;
+  double weight = 4;
+  string packaging = 5;
+}
+
+message AddOrderRequest{
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "AddOrderRequest информация"
+      description: "Описание для AddOrderRequest"
+    }
+  };
+  
+  Order order = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (validate.rules).message.required = true
+  ];
+}
+message ID {
+  int64 id = 1;
+}
+
+message IDReceiver {
+  int64 idReceiver = 1;
+}
+
+message Pagination {
+  int64 page = 1;
+  int64 pageSize = 2;
+}
+
+message Help {
+  string description = 1;
+}
+
+message DeleteOrderRequest {
+  ID ID = 1;
+}
+
+message DeleteOrderResponse{}
+
+message ListOrderRequest{}
+
+message ListOrderResponse{
+    repeated OrderInfo list = 1;
+}
+
+message ListRefundRequest{
+  optional Pagination pagination = 1; 
+}
+
+message ListRefundResponse{
+    repeated OrderInfo list = 1;
+}
+
+message FindOrderRequest{
+  ID id = 1;
+}
+
+message FindOrderResponse{
+    OrderInfo order = 1;
+}
+
+message DeliverOrderRequest{
+  ID id = 1;
+  IDReceiver idReceiver = 2;
+}
+
+message DeliverOrderResponse{
+    OrderInfo order = 1;
+}
+message GetOrderByCustomerRequest{
+  ID id = 1;
+  IDReceiver idReceiver = 2;
+}
+
+message GetOrderByCustomerResponse{
+    OrderInfo order = 1;
+}
+
+message HelpRequest{}
+
+message HelpResponse{
+    repeated Help help = 1;
+}
+
+message RefundOrderRequest{
+  ID ID = 1;
+  IDReceiver IDReceiver = 2;
+}
+
+message RefundOrderResponse{}

@@ -54,3 +54,7 @@ func (p Packaging) GetPrice() float64 {
 func (p Packaging) GetMaxWeight() float64 {
 	return p.MaxWeight
 }
+
+func (p Packaging) ToString(){
+	
+}

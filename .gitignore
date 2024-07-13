@@ -5,3 +5,6 @@ pvz.json
 .env
 /bin
 /vendor-proto
+/vendor.proto
+/protoc-gen-openapiv2
+/google
