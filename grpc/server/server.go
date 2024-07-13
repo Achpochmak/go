@@ -27,8 +27,6 @@ import (
 const (
 	grpcPort = 50051
 	httpPort = ":63342"
-
-	fileName = "telephone_book.json"
 )
 
 var (

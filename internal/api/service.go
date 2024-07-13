@@ -3,6 +3,7 @@ package service
 import (
 	"HOMEWORK-1/internal/module"
 	"context"
+	"fmt"
 	"log"
 
 	"HOMEWORK-1/internal/models"
@@ -32,10 +33,12 @@ func (t *PVZService) AddOrder(ctx context.Context, req *pvz.AddOrderRequest) (*e
 	if errValidate := req.ValidateAll(); errValidate != nil {
 		return nil, status.Error(codes.InvalidArgument, errValidate.Error())
 	}
+	
 	order, errToDomain := pvzToDomain(req)
 	if errToDomain != nil {
 		return nil, status.Error(codes.InvalidArgument, errToDomain.Error())
 	}
+
 	err := t.Module.AddOrder(ctx, order)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -48,6 +51,7 @@ func pvzToDomain(req *pvz.AddOrderRequest) (models.Order, error) {
 	if !ok {
 		packaging = models.NewNoPackaging()
 	}
+
 	return models.Order{
 		ID:          models.ID(req.GetOrder().GetId()),
 		IDReceiver:  models.ID(req.GetOrder().GetIdReceiver()),
@@ -59,6 +63,7 @@ func pvzToDomain(req *pvz.AddOrderRequest) (models.Order, error) {
 
 func (t *PVZService) DeleteOrder(ctx context.Context, req *pvz.DeleteOrderRequest) (*pvz.DeleteOrderResponse, error) {
 	err := t.Module.DeleteOrder(ctx, models.ID(req.GetID().GetId()))
+
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -72,17 +77,16 @@ func (t *PVZService) ListOrder(ctx context.Context, req *pvz.ListOrderRequest) (
 	}
 
 	listPVZ := make([]*pvz.OrderInfo, 0, len(list))
+
 	for _, order := range list {
+		str := fmt.Sprintf("ID заказа: %d\nID получателя: %d\nВремя хранения: %s\nВес: %.2f кг\nЦена: %.2f руб\n\n",
+			order.ID, order.IDReceiver, order.StorageTime, order.WeightKg, order.Price)
 		listPVZ = append(listPVZ, &pvz.OrderInfo{
-			Order: &pvz.Order{
-				Id:         order.ID,
-				IdReceiver: order.IDReceiver,
-				Weight:     order.WeightKg,
-				Packaging:  order.Packaging.GetName(), // Assuming Packaging has a String() method
-				// Add other fields as necessary
-			},
-		})
+			Order: str,
+		},
+		)
 	}
+
 	return &pvz.ListOrderResponse{
 		List: listPVZ,
 	}, nil
@@ -93,14 +97,13 @@ func (t *PVZService) FindOrder(ctx context.Context, req *pvz.FindOrderRequest) (
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	str := fmt.Sprintf("ID заказа: %d\nID получателя: %d\nВремя хранения: %s\nВес: %.2f кг\nЦена: %.2f руб\n\n",
+		order.ID, order.IDReceiver, order.StorageTime, order.WeightKg, order.Price)
+
 	return &pvz.FindOrderResponse{
 		Order: &pvz.OrderInfo{
-			Order: pvz.Order{
-				Id:         order.ID,
-				IdReceiver: order.IDReceiver,
-				Weight:     order.WeightKg,
-				Packaging:  order.Packaging.GetName(), // Assuming Packaging has a String() method
-			},
+			Order: str,
 		},
 	}, nil
 }
